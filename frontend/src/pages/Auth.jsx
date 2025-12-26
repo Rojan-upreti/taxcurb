@@ -1,0 +1,256 @@
+import React, { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+
+function Auth() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState('signup')
+
+  useEffect(() => {
+    // Check hash fragment on mount and when location changes
+    const hash = location.hash.replace('#', '')
+    if (hash === 'login' || hash === 'signup') {
+      setActiveTab(hash)
+      // Scroll to the section after a brief delay to ensure it's rendered
+      setTimeout(() => {
+        const element = document.getElementById(hash)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+    } else {
+      // Default to signup if no hash
+      setActiveTab('signup')
+      navigate('/auth#signup', { replace: true })
+    }
+  }, [location, navigate])
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    navigate(`/auth#${tab}`, { replace: true })
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-stone-100 to-slate-50">
+      <header className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-slate-200 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <nav className="flex items-center justify-between h-16">
+            <Link to="/" className="text-xl font-semibold text-ink tracking-tight hover:text-slate-700 transition-colors">TaxCurb</Link>
+            <div className="flex items-center gap-8">
+              <div className="hidden md:flex items-center gap-6">
+                <Link to="/" className="text-sm text-slate-700 hover:text-ink transition-colors">Home</Link>
+                <Link to="/about" className="text-sm text-slate-700 hover:text-ink transition-colors">About</Link>
+                <Link to="/tutorial" className="text-sm text-slate-700 hover:text-ink transition-colors">Tutorial</Link>
+              </div>
+              <Link to="/auth#signup" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-all duration-200 rounded">Get Started</Link>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-20">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          {/* Left Side - Visual/Content */}
+          <div className="hidden md:block space-y-8">
+            <div className="space-y-4">
+              <h2 className="text-5xl md:text-6xl font-semibold text-ink leading-tight">
+                {activeTab === 'signup' ? 'Start your tax journey' : 'Welcome back'}
+              </h2>
+              <p className="text-xl text-slate-700 leading-relaxed">
+                {activeTab === 'signup' 
+                  ? 'Join thousands of F-1 students filing their taxes with confidence. Free, accurate, and designed for you.'
+                  : 'Continue where you left off. Access your tax returns and file with ease.'}
+              </p>
+            </div>
+            
+            <div className="space-y-4 pt-8">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-ink/10 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-ink mb-1">Free for students</h3>
+                  <p className="text-slate-600 text-sm">No hidden fees, no credit card required</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-ink/10 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-ink mb-1">Secure & compliant</h3>
+                  <p className="text-slate-600 text-sm">IRS-compliant forms, encrypted data</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-ink/10 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-ink mb-1">Fast & easy</h3>
+                  <p className="text-slate-600 text-sm">Complete your return in minutes</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side - Form */}
+          <div className="w-full">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+              {/* Tab Switcher */}
+              <div className="flex border-b border-slate-200 bg-slate-50/50">
+                <button
+                  onClick={() => handleTabChange('signup')}
+                  className={`flex-1 px-6 py-4 text-sm font-semibold transition-all duration-300 relative ${
+                    activeTab === 'signup'
+                      ? 'text-ink bg-white'
+                      : 'text-slate-600 hover:text-ink hover:bg-white/50'
+                  }`}
+                >
+                  <span className="relative z-10">Sign Up</span>
+                  {activeTab === 'signup' && (
+                    <span className="absolute bottom-0 left-0 right-0 h-1 bg-ink"></span>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleTabChange('login')}
+                  className={`flex-1 px-6 py-4 text-sm font-semibold transition-all duration-300 relative ${
+                    activeTab === 'login'
+                      ? 'text-ink bg-white'
+                      : 'text-slate-600 hover:text-ink hover:bg-white/50'
+                  }`}
+                >
+                  <span className="relative z-10">Sign In</span>
+                  {activeTab === 'login' && (
+                    <span className="absolute bottom-0 left-0 right-0 h-1 bg-ink"></span>
+                  )}
+                </button>
+              </div>
+
+              <div className="p-8 md:p-10">
+                {/* Sign Up Section */}
+                <div id="signup" className={`transition-all duration-500 ${activeTab === 'signup' ? 'block opacity-100 translate-y-0' : 'hidden opacity-0 -translate-y-4'}`}>
+                  <div className="mb-8">
+                    <h1 className="text-3xl md:text-4xl font-semibold text-ink mb-2">Create your account</h1>
+                    <p className="text-slate-600">Get started with TaxCurb and file your taxes for free.</p>
+                  </div>
+                  <form className="space-y-5">
+                    <div>
+                      <label htmlFor="signup-name" className="block text-sm font-semibold text-ink mb-2">Full Name</label>
+                      <input
+                        type="text"
+                        id="signup-name"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="signup-email" className="block text-sm font-semibold text-ink mb-2">Email</label>
+                      <input
+                        type="email"
+                        id="signup-email"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
+                        placeholder="your.email@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="signup-password" className="block text-sm font-semibold text-ink mb-2">Password</label>
+                      <input
+                        type="password"
+                        id="signup-password"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="signup-confirm" className="block text-sm font-semibold text-ink mb-2">Confirm Password</label>
+                      <input
+                        type="password"
+                        id="signup-confirm"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full px-8 py-4 bg-ink text-white text-sm font-semibold hover:bg-slate-800 transition-all duration-200 border border-ink rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                    >
+                      Create Account
+                    </button>
+                  </form>
+                  <p className="mt-6 text-sm text-slate-600 text-center">
+                    Already have an account?{' '}
+                    <button
+                      onClick={() => handleTabChange('login')}
+                      className="text-ink font-semibold hover:underline transition-all"
+                    >
+                      Sign in
+                    </button>
+                  </p>
+                </div>
+
+                {/* Sign In Section */}
+                <div id="login" className={`transition-all duration-500 ${activeTab === 'login' ? 'block opacity-100 translate-y-0' : 'hidden opacity-0 -translate-y-4'}`}>
+                  <div className="mb-8">
+                    <h1 className="text-3xl md:text-4xl font-semibold text-ink mb-2">Welcome back</h1>
+                    <p className="text-slate-600">Sign in to your TaxCurb account.</p>
+                  </div>
+                  <form className="space-y-5">
+                    <div>
+                      <label htmlFor="login-email" className="block text-sm font-semibold text-ink mb-2">Email</label>
+                      <input
+                        type="email"
+                        id="login-email"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
+                        placeholder="your.email@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="login-password" className="block text-sm font-semibold text-ink mb-2">Password</label>
+                      <input
+                        type="password"
+                        id="login-password"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center cursor-pointer group">
+                        <input type="checkbox" className="mr-2 rounded border-slate-300 text-ink focus:ring-ink w-4 h-4 cursor-pointer" />
+                        <span className="text-sm text-slate-700 group-hover:text-ink transition-colors">Remember me</span>
+                      </label>
+                      <a href="#" className="text-sm text-ink font-medium hover:underline transition-all">Forgot password?</a>
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full px-8 py-4 bg-ink text-white text-sm font-semibold hover:bg-slate-800 transition-all duration-200 border border-ink rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                    >
+                      Sign In
+                    </button>
+                  </form>
+                  <p className="mt-6 text-sm text-slate-600 text-center">
+                    Don't have an account?{' '}
+                    <button
+                      onClick={() => handleTabChange('signup')}
+                      className="text-ink font-semibold hover:underline transition-all"
+                    >
+                      Sign up
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export default Auth

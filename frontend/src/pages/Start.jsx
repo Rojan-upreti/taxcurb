@@ -14,7 +14,7 @@ function Start() {
                 <Link to="/about" className="text-sm text-slate-700 hover:text-ink">About</Link>
                 <Link to="/tutorial" className="text-sm text-slate-700 hover:text-ink">Tutorial</Link>
               </div>
-              <Link to="/login" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Login</Link>
+              <Link to="/auth#login" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Login</Link>
             </div>
           </nav>
         </div>
