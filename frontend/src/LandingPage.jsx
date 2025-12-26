@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 
 function LandingPage() {
   return (
@@ -6,14 +7,14 @@ function LandingPage() {
       <header className="sticky top-0 bg-stone-50 border-b border-slate-300 z-10">
         <div className="max-w-6xl mx-auto px-4 md:px-8">
           <nav className="flex items-center justify-between h-16">
-            <a href="/" className="text-xl font-semibold text-ink tracking-tight hover:text-slate-700">TaxCurb</a>
+            <Link to="/" className="text-xl font-semibold text-ink tracking-tight hover:text-slate-700">TaxCurb</Link>
             <div className="flex items-center gap-8">
               <div className="hidden md:flex items-center gap-6">
-                <a href="/" className="text-sm text-slate-700 hover:text-ink">Home</a>
-                <a href="/about" className="text-sm text-slate-700 hover:text-ink">About</a>
-                <a href="/tutorial" className="text-sm text-slate-700 hover:text-ink">Tutorial</a>
+                <Link to="/" className="text-sm text-slate-700 hover:text-ink">Home</Link>
+                <Link to="/about" className="text-sm text-slate-700 hover:text-ink">About</Link>
+                <Link to="/tutorial" className="text-sm text-slate-700 hover:text-ink">Tutorial</Link>
               </div>
-              <a href="/start" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Start filing</a>
+              <Link to="/start" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Start filing</Link>
             </div>
           </nav>
         </div>
@@ -33,18 +34,18 @@ function LandingPage() {
                   Accurate, compliant tax filing designed specifically for international students For Free.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <a
-                    href="/start"
+                  <Link
+                    to="/start"
                     className="inline-block px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink text-center"
                   >
                     Start Filing
-                  </a>
-                  <a
-                    href="/login"
+                  </Link>
+                  <Link
+                    to="/login"
                     className="inline-block px-8 py-4 bg-white text-ink text-sm font-medium hover:bg-stone-100 transition-colors border border-slate-300 text-center"
                   >
                     Login
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -197,18 +198,18 @@ function LandingPage() {
                   Check if you need to file and get started with your tax return.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <a
-                    href="/login"
+                  <Link
+                    to="/login"
                     className="inline-block px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink text-center"
                   >
                     Login
-                  </a>
-                  <a
-                    href="/start"
+                  </Link>
+                  <Link
+                    to="/start"
                     className="inline-block px-8 py-4 bg-white text-ink text-sm font-medium hover:bg-stone-100 transition-colors border border-slate-300 text-center"
                   >
                     Start filing
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -220,11 +221,11 @@ function LandingPage() {
                   <p className="text-xs text-slate-500">Built with IRS rules for non-resident aliens in mind.</p>
                 </div>
                 <nav className="flex flex-wrap gap-6 text-sm">
-                  <a href="/" className="text-slate-700 hover:text-ink">Home</a>
-                  <a href="/about" className="text-slate-700 hover:text-ink">About</a>
-                  <a href="/tutorial" className="text-slate-700 hover:text-ink">Tutorial</a>
-                  <a href="/check" className="text-slate-700 hover:text-ink">Check if you need to file</a>
-                  <a href="/start" className="text-slate-700 hover:text-ink">Start filing</a>
+                  <Link to="/" className="text-slate-700 hover:text-ink">Home</Link>
+                  <Link to="/about" className="text-slate-700 hover:text-ink">About</Link>
+                  <Link to="/tutorial" className="text-slate-700 hover:text-ink">Tutorial</Link>
+                  <Link to="/check" className="text-slate-700 hover:text-ink">Check if you need to file</Link>
+                  <Link to="/start" className="text-slate-700 hover:text-ink">Start filing</Link>
                 </nav>
                 </div>
               </div>
