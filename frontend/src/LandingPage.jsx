@@ -14,7 +14,7 @@ function LandingPage() {
                 <Link to="/about" className="text-sm text-slate-700 hover:text-ink">About</Link>
                 <Link to="/tutorial" className="text-sm text-slate-700 hover:text-ink">Tutorial</Link>
               </div>
-              <Link to="/start" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Start filing</Link>
+              <Link to="/auth#signup" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Get Started</Link>
             </div>
           </nav>
         </div>
@@ -35,13 +35,13 @@ function LandingPage() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
-                    to="/start"
+                    to="/auth#signup"
                     className="inline-block px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink text-center"
                   >
                     Start Filing
                   </Link>
                   <Link
-                    to="/login"
+                    to="/auth#login"
                     className="inline-block px-8 py-4 bg-white text-ink text-sm font-medium hover:bg-stone-100 transition-colors border border-slate-300 text-center"
                   >
                     Login
@@ -199,13 +199,13 @@ function LandingPage() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
-                    to="/login"
+                    to="/auth#login"
                     className="inline-block px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink text-center"
                   >
                     Login
                   </Link>
                   <Link
-                    to="/start"
+                    to="/auth#signup"
                     className="inline-block px-8 py-4 bg-white text-ink text-sm font-medium hover:bg-stone-100 transition-colors border border-slate-300 text-center"
                   >
                     Start filing
@@ -225,7 +225,7 @@ function LandingPage() {
                   <Link to="/about" className="text-slate-700 hover:text-ink">About</Link>
                   <Link to="/tutorial" className="text-slate-700 hover:text-ink">Tutorial</Link>
                   <Link to="/check" className="text-slate-700 hover:text-ink">Check if you need to file</Link>
-                  <Link to="/start" className="text-slate-700 hover:text-ink">Start filing</Link>
+                  <Link to="/auth#signup" className="text-slate-700 hover:text-ink">Start filing</Link>
                 </nav>
                 </div>
               </div>

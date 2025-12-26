@@ -14,7 +14,7 @@ function Tutorial() {
                 <Link to="/about" className="text-sm text-slate-700 hover:text-ink">About</Link>
                 <Link to="/tutorial" className="text-sm text-slate-700 hover:text-ink">Tutorial</Link>
               </div>
-              <Link to="/start" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Start filing</Link>
+              <Link to="/auth#signup" className="text-sm text-ink font-medium border border-ink px-4 py-2 hover:bg-ink hover:text-white transition-colors">Get Started</Link>
             </div>
           </nav>
         </div>
