@@ -1,10 +1,21 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { signUp, signIn } from '../services/authService'
 
 function Auth() {
   const location = useLocation()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('signup')
+  
+  // Form states
+  const [signupEmail, setSignupEmail] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  
+  // UI states
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     // Check hash fragment on mount and when location changes
@@ -28,6 +39,83 @@ function Auth() {
   const handleTabChange = (tab) => {
     setActiveTab(tab)
     navigate(`/auth#${tab}`, { replace: true })
+    // Clear errors when switching tabs
+    setError('')
+  }
+
+  // Handle signup
+  const handleSignup = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    if (!signupEmail || !signupPassword) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    if (signupPassword.length < 6) {
+      setError('Password must be at least 6 characters long')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await signUp(signupEmail, signupPassword)
+      // Success - redirect to dashboard or home
+      navigate('/start')
+    } catch (err) {
+      console.error('Signup error:', err)
+      // Handle Firebase errors
+      if (err.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address')
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Please use a stronger password.')
+      } else if (err.message) {
+        setError(err.message)
+      } else {
+        setError('Failed to create account. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle signin
+  const handleSignin = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    if (!loginEmail || !loginPassword) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await signIn(loginEmail, loginPassword)
+      // Success - redirect to dashboard or home
+      navigate('/start')
+    } catch (err) {
+      console.error('Signin error:', err)
+      // Handle Firebase errors
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email')
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Incorrect password')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address')
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('Invalid email or password')
+      } else if (err.message) {
+        setError(err.message)
+      } else {
+        setError('Failed to sign in. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -134,29 +222,30 @@ function Auth() {
               </div>
 
               <div className="p-8 md:p-10">
+                {/* Error Message */}
+                {error && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
+                )}
+
                 {/* Sign Up Section */}
                 <div id="signup" className={`transition-all duration-500 ${activeTab === 'signup' ? 'block opacity-100 translate-y-0' : 'hidden opacity-0 -translate-y-4'}`}>
                   <div className="mb-8">
                     <h1 className="text-3xl md:text-4xl font-semibold text-ink mb-2">Create your account</h1>
                     <p className="text-slate-600">Get started with TaxCurb and file your taxes for free.</p>
                   </div>
-                  <form className="space-y-5">
-                    <div>
-                      <label htmlFor="signup-name" className="block text-sm font-semibold text-ink mb-2">Full Name</label>
-                      <input
-                        type="text"
-                        id="signup-name"
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
-                        placeholder="John Doe"
-                      />
-                    </div>
+                  <form onSubmit={handleSignup} className="space-y-5">
                     <div>
                       <label htmlFor="signup-email" className="block text-sm font-semibold text-ink mb-2">Email</label>
                       <input
                         type="email"
                         id="signup-email"
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
                         placeholder="your.email@example.com"
+                        required
                       />
                     </div>
                     <div>
@@ -164,24 +253,20 @@ function Auth() {
                       <input
                         type="password"
                         id="signup-password"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
                         placeholder="••••••••"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="signup-confirm" className="block text-sm font-semibold text-ink mb-2">Confirm Password</label>
-                      <input
-                        type="password"
-                        id="signup-confirm"
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
-                        placeholder="••••••••"
+                        required
+                        minLength={6}
                       />
                     </div>
                     <button
                       type="submit"
-                      className="w-full px-8 py-4 bg-ink text-white text-sm font-semibold hover:bg-slate-800 transition-all duration-200 border border-ink rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                      disabled={loading}
+                      className="w-full px-8 py-4 bg-ink text-white text-sm font-semibold hover:bg-slate-800 transition-all duration-200 border border-ink rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     >
-                      Create Account
+                      {loading ? 'Creating Account...' : 'Create Account'}
                     </button>
                   </form>
                   <p className="mt-6 text-sm text-slate-600 text-center">
@@ -201,14 +286,17 @@ function Auth() {
                     <h1 className="text-3xl md:text-4xl font-semibold text-ink mb-2">Welcome back</h1>
                     <p className="text-slate-600">Sign in to your TaxCurb account.</p>
                   </div>
-                  <form className="space-y-5">
+                  <form onSubmit={handleSignin} className="space-y-5">
                     <div>
                       <label htmlFor="login-email" className="block text-sm font-semibold text-ink mb-2">Email</label>
                       <input
                         type="email"
                         id="login-email"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
                         placeholder="your.email@example.com"
+                        required
                       />
                     </div>
                     <div>
@@ -216,8 +304,11 @@ function Auth() {
                       <input
                         type="password"
                         id="login-password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent transition-all bg-white hover:border-slate-400"
                         placeholder="••••••••"
+                        required
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -229,9 +320,10 @@ function Auth() {
                     </div>
                     <button
                       type="submit"
-                      className="w-full px-8 py-4 bg-ink text-white text-sm font-semibold hover:bg-slate-800 transition-all duration-200 border border-ink rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                      disabled={loading}
+                      className="w-full px-8 py-4 bg-ink text-white text-sm font-semibold hover:bg-slate-800 transition-all duration-200 border border-ink rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     >
-                      Sign In
+                      {loading ? 'Signing In...' : 'Sign In'}
                     </button>
                   </form>
                   <p className="mt-6 text-sm text-slate-600 text-center">
