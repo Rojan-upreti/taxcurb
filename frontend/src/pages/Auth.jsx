@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 function Auth() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { currentUser } = useAuth()
+  const { currentUser, refreshAuth } = useAuth()
   const [activeTab, setActiveTab] = useState('signup')
   
   // Form states
@@ -69,18 +69,14 @@ function Auth() {
     setLoading(true)
     try {
       await signUp(signupEmail, signupPassword)
-      // Success - redirect to dashboard or home
-      navigate('/dashboard')
+      // Refresh auth state to get the new user from cookies
+      await refreshAuth()
+      // Success - redirect to dashboard
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       console.error('Signup error:', err)
-      // Handle Firebase errors
-      if (err.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists')
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Invalid email address')
-      } else if (err.code === 'auth/weak-password') {
-        setError('Password is too weak. Please use a stronger password.')
-      } else if (err.message) {
+      // Handle backend API errors
+      if (err.message) {
         setError(err.message)
       } else {
         setError('Failed to create account. Please try again.')
@@ -103,20 +99,14 @@ function Auth() {
     setLoading(true)
     try {
       await signIn(loginEmail, loginPassword)
-      // Success - redirect to dashboard or home
-      navigate('/dashboard')
+      // Refresh auth state to get the new user from cookies
+      await refreshAuth()
+      // Success - redirect to dashboard
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       console.error('Signin error:', err)
-      // Handle Firebase errors
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email')
-      } else if (err.code === 'auth/wrong-password') {
-        setError('Incorrect password')
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Invalid email address')
-      } else if (err.code === 'auth/invalid-credential') {
-        setError('Invalid email or password')
-      } else if (err.message) {
+      // Handle backend API errors
+      if (err.message) {
         setError(err.message)
       } else {
         setError('Failed to sign in. Please try again.')
