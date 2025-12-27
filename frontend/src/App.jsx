@@ -5,6 +5,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 import HomeRedirect from './components/HomeRedirect'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
+import Filing from './pages/Filing'
+import Residency from './pages/Residency'
 import Auth from './pages/Auth'
 import About from './pages/About'
 import Tutorial from './pages/Tutorial'
@@ -28,6 +30,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Onboarding />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing" 
+            element={
+              <ProtectedRoute>
+                <Filing />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/residency" 
+            element={
+              <ProtectedRoute>
+                <Residency />
               </ProtectedRoute>
             } 
           />
