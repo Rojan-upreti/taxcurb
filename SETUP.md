@@ -7,20 +7,21 @@
 1. **Create `.env` file** in the `frontend` directory:
    ```bash
    cd frontend
-   cp .env.example .env
    ```
    
-   The `.env` file should contain:
+   Create `.env` with:
    ```
-   VITE_FIREBASE_API_KEY=AIzaSyBct1ligaDJDwzswLGAp--kmWyfkKFGkAI
-   VITE_FIREBASE_AUTH_DOMAIN=taxcurb.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=taxcurb
-   VITE_FIREBASE_STORAGE_BUCKET=taxcurb.firebasestorage.app
-   VITE_FIREBASE_MESSAGING_SENDER_ID=728454502512
-   VITE_FIREBASE_APP_ID=1:728454502512:web:044882b1b64ed5fbab7cb5
-   VITE_FIREBASE_MEASUREMENT_ID=G-0P9EVDDPP9
+   VITE_FIREBASE_API_KEY=your-firebase-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+   VITE_FIREBASE_APP_ID=your-app-id
+   VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
    VITE_API_URL=http://localhost:3001
    ```
+   
+   **Note:** Get these values from your Firebase Console → Project Settings → General
 
 2. **Install dependencies** (if not already done):
    ```bash
@@ -37,7 +38,7 @@
 
 2. **Get Firebase Service Account Key:**
    - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Select your project (taxcurb)
+   - Select your project
    - Go to Project Settings → Service Accounts
    - Click "Generate new private key"
    - Download the JSON file
@@ -50,8 +51,8 @@
    Create `.env` with:
    ```
    PORT=3001
-   FIREBASE_PROJECT_ID=taxcurb
-   FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@taxcurb.iam.gserviceaccount.com
+   FIREBASE_PROJECT_ID=your-project-id
+   FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
    FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
    ```
    
@@ -79,7 +80,6 @@ npm run dev
 ## Features
 
 - ✅ Firebase Authentication (Email/Password)
-- ✅ Password confirmation validation
 - ✅ Backend API integration
 - ✅ Error handling
 - ✅ Loading states
@@ -90,5 +90,3 @@ npm run dev
 - The frontend handles Firebase authentication
 - The backend verifies tokens and stores user info (you can add database integration)
 - Password must be at least 6 characters
-- Passwords must match during signup
-
