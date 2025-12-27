@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { signUp, signIn } from '../services/authService'
+import { useAuth } from '../contexts/AuthContext'
 
 function Auth() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { currentUser } = useAuth()
   const [activeTab, setActiveTab] = useState('signup')
   
   // Form states
@@ -18,6 +20,12 @@ function Auth() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    // Redirect to dashboard if already authenticated
+    if (currentUser) {
+      navigate('/dashboard', { replace: true })
+      return
+    }
+
     // Check hash fragment on mount and when location changes
     const hash = location.hash.replace('#', '')
     if (hash === 'login' || hash === 'signup') {
@@ -34,7 +42,7 @@ function Auth() {
       setActiveTab('signup')
       navigate('/auth#signup', { replace: true })
     }
-  }, [location, navigate])
+  }, [location, navigate, currentUser])
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
@@ -62,7 +70,7 @@ function Auth() {
     try {
       await signUp(signupEmail, signupPassword)
       // Success - redirect to dashboard or home
-      navigate('/start')
+      navigate('/dashboard')
     } catch (err) {
       console.error('Signup error:', err)
       // Handle Firebase errors
@@ -96,7 +104,7 @@ function Auth() {
     try {
       await signIn(loginEmail, loginPassword)
       // Success - redirect to dashboard or home
-      navigate('/start')
+      navigate('/dashboard')
     } catch (err) {
       console.error('Signin error:', err)
       // Handle Firebase errors
