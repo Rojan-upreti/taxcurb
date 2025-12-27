@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth'
-import { auth } from '../firebase/config'
+import { checkAuth, getCurrentUser } from '../services/authService'
 
 const AuthContext = createContext({})
 
@@ -16,49 +15,51 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Check session storage first
-    const storedUser = sessionStorage.getItem('taxcurb_user')
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser)
-        setCurrentUser(userData)
-      } catch (error) {
-        console.error('Error parsing stored user:', error)
-        sessionStorage.removeItem('taxcurb_user')
-      }
-    }
-
-    // Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+  const refreshAuth = async () => {
+    try {
+      const user = await checkAuth()
       if (user) {
-        const userData = {
-          uid: user.uid,
-          email: user.email,
-          emailVerified: user.emailVerified,
-        }
-        setCurrentUser(userData)
-        // Store in session storage
-        sessionStorage.setItem('taxcurb_user', JSON.stringify(userData))
+        setCurrentUser(user)
       } else {
         setCurrentUser(null)
-        sessionStorage.removeItem('taxcurb_user')
       }
-      setLoading(false)
-    })
+      return user
+    } catch (error) {
+      console.error('Auth verification error:', error)
+      setCurrentUser(null)
+      return null
+    }
+  }
 
-    return () => unsubscribe()
+  useEffect(() => {
+    // Check authentication status from backend (cookies)
+    const verifyAuth = async () => {
+      // First check sessionStorage for quick load
+      const storedUser = getCurrentUser()
+      if (storedUser) {
+        setCurrentUser(storedUser)
+        setLoading(false)
+      }
+
+      // Then verify with backend (checks cookies)
+      await refreshAuth()
+      setLoading(false)
+    }
+
+    verifyAuth()
   }, [])
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth)
+      const { signOut: signOutService } = await import('../services/authService')
+      await signOutService()
       setCurrentUser(null)
-      sessionStorage.removeItem('taxcurb_user')
       return { success: true }
     } catch (error) {
       console.error('Sign out error:', error)
-      throw error
+      // Clear state even if there's an error
+      setCurrentUser(null)
+      return { success: true }
     }
   }
 
@@ -66,6 +67,7 @@ export const AuthProvider = ({ children }) => {
     currentUser,
     loading,
     signOut,
+    refreshAuth,
   }
 
   return (
@@ -74,4 +76,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   )
 }
-
