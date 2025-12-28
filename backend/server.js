@@ -11,12 +11,23 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 
+// Security middleware - set security headers
+app.use((req, res, next) => {
+  // Prevent XSS attacks
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Prevent MIME type sniffing
+  res.setHeader('Content-Security-Policy', "default-src 'self'");
+  next();
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true, // Allow cookies
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Limit request body size
 app.use(cookieParser());
 
 // Initialize Firebase Admin with credentials from .env
@@ -141,8 +152,13 @@ app.get('/api/auth/check', async (req, res) => {
 
     if (!response.ok || data.error || !data.users || data.users.length === 0) {
       // Invalid token, clear cookie
-      res.clearCookie('taxcurb_token', { httpOnly: true, sameSite: 'lax', secure: false });
-      res.clearCookie('taxcurb_user', { httpOnly: true, sameSite: 'lax', secure: false });
+      const cookieOptions = {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      };
+      res.clearCookie('taxcurb_token', cookieOptions);
+      res.clearCookie('taxcurb_user', cookieOptions);
       return res.json({ authenticated: false, user: null });
     }
 
@@ -157,8 +173,13 @@ app.get('/api/auth/check', async (req, res) => {
     });
   } catch (error) {
     console.error('Auth check error:', error);
-    res.clearCookie('taxcurb_token', { httpOnly: true, sameSite: 'lax', secure: false });
-    res.clearCookie('taxcurb_user', { httpOnly: true, sameSite: 'lax', secure: false });
+    const cookieOptions = {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    };
+    res.clearCookie('taxcurb_token', cookieOptions);
+    res.clearCookie('taxcurb_user', cookieOptions);
     res.json({ authenticated: false, user: null });
   }
 });
@@ -174,21 +195,29 @@ app.post('/api/auth/signup', async (req, res) => {
       });
     }
 
-    // Validate email format
+    // Validate and sanitize email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const sanitizedEmail = email.trim().toLowerCase();
+    if (!emailRegex.test(sanitizedEmail)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Validate password length
+    // Validate password length and strength
     if (password.length < 6) {
       return res.status(400).json({ 
         error: 'Password must be at least 6 characters long' 
       });
     }
 
+    // Prevent password from being too long (prevent DoS)
+    if (password.length > 128) {
+      return res.status(400).json({ 
+        error: 'Password is too long' 
+      });
+    }
+
     // Create user using Firebase REST API
-    const firebaseResponse = await createUserWithFirebase(email, password);
+    const firebaseResponse = await createUserWithFirebase(sanitizedEmail, password);
 
     // Set HTTP-only cookies for session management
     const cookieOptions = {
@@ -249,8 +278,24 @@ app.post('/api/auth/signin', async (req, res) => {
       });
     }
 
+    // Sanitize email
+    const sanitizedEmail = email.trim().toLowerCase();
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(sanitizedEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Prevent password from being too long (prevent DoS)
+    if (password.length > 128) {
+      return res.status(400).json({ 
+        error: 'Invalid credentials' 
+      });
+    }
+
     // Authenticate using Firebase REST API
-    const firebaseResponse = await authenticateWithFirebase(email, password);
+    const firebaseResponse = await authenticateWithFirebase(sanitizedEmail, password);
 
     // Set HTTP-only cookies for session management
     const cookieOptions = {
@@ -277,16 +322,11 @@ app.post('/api/auth/signin', async (req, res) => {
   } catch (error) {
     console.error('Signin error:', error);
     
-    // Handle Firebase REST API errors
-    if (error.message && error.message.includes('EMAIL_NOT_FOUND')) {
-      return res.status(404).json({ 
-        error: 'No account found with this email' 
-      });
-    }
-    
-    if (error.message && error.message.includes('INVALID_PASSWORD')) {
+    // Handle Firebase REST API errors - use generic messages to prevent information leakage
+    if (error.message && (error.message.includes('EMAIL_NOT_FOUND') || error.message.includes('INVALID_PASSWORD'))) {
+      // Don't reveal whether email exists or password is wrong
       return res.status(401).json({ 
-        error: 'Incorrect password' 
+        error: 'Invalid email or password' 
       });
     }
     
@@ -295,15 +335,20 @@ app.post('/api/auth/signin', async (req, res) => {
     }
 
     res.status(500).json({ 
-      error: error.message || 'Failed to sign in. Please try again.' 
+      error: 'Failed to sign in. Please try again.' 
     });
   }
 });
 
 // Logout endpoint
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('taxcurb_token', { httpOnly: true, sameSite: 'lax', secure: false });
-  res.clearCookie('taxcurb_user', { httpOnly: true, sameSite: 'lax', secure: false });
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  };
+  res.clearCookie('taxcurb_token', cookieOptions);
+  res.clearCookie('taxcurb_user', cookieOptions);
   res.json({ success: true, message: 'Logged out successfully' });
 });
 

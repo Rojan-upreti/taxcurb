@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
+import { validateEmail, validatePhone, validateZIP, formatPhone, formatZIP } from '../utils/validation'
 
 function ProgramUSPresence() {
   const navigate = useNavigate()
@@ -133,11 +134,11 @@ function ProgramUSPresence() {
     institutionStreet1 !== '' &&
     institutionCity !== '' &&
     institutionState !== '' &&
-    institutionZip !== '' &&
-    institutionPhone !== '' &&
+    validateZIP(institutionZip) &&
+    validatePhone(institutionPhone) &&
     dsoName !== '' &&
-    dsoEmail !== '' &&
-    dsoPhone !== ''
+    validateEmail(dsoEmail) &&
+    validatePhone(dsoPhone)
 
   const completedPages = allFieldsCompleted 
     ? ['profile', 'residency', 'visa_status', 'income', 'identity_travel', 'program_presence']
@@ -277,10 +278,18 @@ function ProgramUSPresence() {
                           <input
                             type="text"
                             value={institutionZip}
-                            onChange={(e) => setInstitutionZip(e.target.value)}
-                            className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                            placeholder="Enter ZIP code"
+                            onChange={(e) => setInstitutionZip(formatZIP(e.target.value))}
+                            className={`w-full px-3 py-1.5 text-sm border-2 rounded-full font-medium focus:outline-none ${
+                              institutionZip && !validateZIP(institutionZip)
+                                ? 'border-red-500 bg-red-50'
+                                : 'border-slate-300 bg-white text-ink focus:border-ink'
+                            }`}
+                            placeholder="12345"
+                            maxLength={5}
                           />
+                          {institutionZip && !validateZIP(institutionZip) && (
+                            <p className="text-xs text-red-600 mt-1">ZIP code must be 5 digits</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -294,10 +303,18 @@ function ProgramUSPresence() {
                     <input
                       type="tel"
                       value={institutionPhone}
-                      onChange={(e) => setInstitutionPhone(e.target.value)}
-                      className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                      placeholder="Enter phone number"
+                      onChange={(e) => setInstitutionPhone(formatPhone(e.target.value))}
+                      className={`w-full px-3 py-1.5 text-sm border-2 rounded-full font-medium focus:outline-none ${
+                        institutionPhone && !validatePhone(institutionPhone)
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-slate-300 bg-white text-ink focus:border-ink'
+                      }`}
+                      placeholder="(123) 456-7890"
+                      maxLength={14}
                     />
+                    {institutionPhone && !validatePhone(institutionPhone) && (
+                      <p className="text-xs text-red-600 mt-1">Phone number must be 10 digits</p>
+                    )}
                   </div>
                 </div>
               </QuestionCard>
@@ -329,9 +346,16 @@ function ProgramUSPresence() {
                       type="email"
                       value={dsoEmail}
                       onChange={(e) => setDsoEmail(e.target.value)}
-                      className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                      placeholder="Enter email"
+                      className={`w-full px-3 py-1.5 text-sm border-2 rounded-full font-medium focus:outline-none ${
+                        dsoEmail && !validateEmail(dsoEmail)
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-slate-300 bg-white text-ink focus:border-ink'
+                      }`}
+                      placeholder="email@example.com"
                     />
+                    {dsoEmail && !validateEmail(dsoEmail) && (
+                      <p className="text-xs text-red-600 mt-1">Please enter a valid email address</p>
+                    )}
                   </div>
 
                   {/* DSO Phone */}
@@ -342,10 +366,18 @@ function ProgramUSPresence() {
                     <input
                       type="tel"
                       value={dsoPhone}
-                      onChange={(e) => setDsoPhone(e.target.value)}
-                      className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                      placeholder="Enter phone number"
+                      onChange={(e) => setDsoPhone(formatPhone(e.target.value))}
+                      className={`w-full px-3 py-1.5 text-sm border-2 rounded-full font-medium focus:outline-none ${
+                        dsoPhone && !validatePhone(dsoPhone)
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-slate-300 bg-white text-ink focus:border-ink'
+                      }`}
+                      placeholder="(123) 456-7890"
+                      maxLength={14}
                     />
+                    {dsoPhone && !validatePhone(dsoPhone) && (
+                      <p className="text-xs text-red-600 mt-1">Phone number must be 10 digits</p>
+                    )}
                   </div>
                 </div>
               </div>

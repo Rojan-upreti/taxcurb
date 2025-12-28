@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
+import { validateZIP, formatZIP } from '../utils/validation'
 
 function Address() {
   const navigate = useNavigate()
@@ -54,7 +55,7 @@ function Address() {
     usStreet1 !== '' &&
     usCity !== '' &&
     usState !== '' &&
-    usZip !== ''
+    validateZIP(usZip)
 
   const completedPages = allFieldsCompleted 
     ? ['profile', 'residency', 'visa_status', 'income', 'identity_travel', 'program_presence', 'prior_visa_history', 'address']
@@ -185,10 +186,18 @@ function Address() {
                         <input
                           type="text"
                           value={residenceZip}
-                          onChange={(e) => setResidenceZip(e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
+                          onChange={(e) => setResidenceZip(formatZIP(e.target.value))}
+                          className={`w-full px-3 py-1.5 text-xs border-2 rounded-full font-medium focus:outline-none ${
+                            residenceZip && !validateZIP(residenceZip)
+                              ? 'border-red-500 bg-red-50'
+                              : 'border-slate-300 bg-white text-ink focus:border-ink'
+                          }`}
                           placeholder="ZIP"
+                          maxLength={5}
                         />
+                        {residenceZip && !validateZIP(residenceZip) && (
+                          <p className="text-xs text-red-600 mt-0.5">ZIP code must be 5 digits</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -280,10 +289,18 @@ function Address() {
                         <input
                           type="text"
                           value={usZip}
-                          onChange={(e) => setUsZip(e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                          placeholder="ZIP"
+                          onChange={(e) => setUsZip(formatZIP(e.target.value))}
+                          className={`w-full px-3 py-1.5 text-xs border-2 rounded-full font-medium focus:outline-none ${
+                            usZip && !validateZIP(usZip)
+                              ? 'border-red-500 bg-red-50'
+                              : 'border-slate-300 bg-white text-ink focus:border-ink'
+                          }`}
+                          placeholder="12345"
+                          maxLength={5}
                         />
+                        {usZip && !validateZIP(usZip) && (
+                          <p className="text-xs text-red-600 mt-0.5">ZIP code must be 5 digits</p>
+                        )}
                       </div>
                     </div>
                   </div>

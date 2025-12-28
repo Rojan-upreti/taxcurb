@@ -29,10 +29,8 @@ export const signUp = async (email, password) => {
       throw new Error(data.error || 'Failed to create account');
     }
 
-    // Also store in sessionStorage for quick access (backup)
-    if (data.user) {
-      sessionStorage.setItem('taxcurb_user', JSON.stringify(data.user));
-    }
+    // Note: User data is stored in HTTP-only cookies by backend for security
+    // sessionStorage is not used to prevent XSS attacks
 
     return data;
   } catch (error) {
@@ -62,10 +60,8 @@ export const signIn = async (email, password) => {
       throw new Error(data.error || 'Failed to sign in');
     }
 
-    // Also store in sessionStorage for quick access (backup)
-    if (data.user) {
-      sessionStorage.setItem('taxcurb_user', JSON.stringify(data.user));
-    }
+    // Note: User data is stored in HTTP-only cookies by backend for security
+    // sessionStorage is not used to prevent XSS attacks
 
     return data;
   } catch (error) {
@@ -83,16 +79,10 @@ export const signOut = async () => {
       credentials: 'include',
     });
 
-    // Clear session storage
-    sessionStorage.removeItem('taxcurb_user');
-    sessionStorage.removeItem('taxcurb_token');
-    
+    // Note: Cookies are cleared by backend
     return { success: true };
   } catch (error) {
     console.error('Sign out error:', error);
-    // Clear local storage even if API call fails
-    sessionStorage.removeItem('taxcurb_user');
-    sessionStorage.removeItem('taxcurb_token');
     return { success: true };
   }
 };
@@ -108,14 +98,11 @@ export const checkAuth = async () => {
     const data = await response.json();
 
     if (data.authenticated && data.user) {
-      // Sync with sessionStorage
-      sessionStorage.setItem('taxcurb_user', JSON.stringify(data.user));
+      // User data is in HTTP-only cookies, no need for sessionStorage
       return data.user;
     }
 
-    // Not authenticated, clear storage
-    sessionStorage.removeItem('taxcurb_user');
-    sessionStorage.removeItem('taxcurb_token');
+    // Not authenticated
     return null;
   } catch (error) {
     console.error('Auth check error:', error);
@@ -123,28 +110,12 @@ export const checkAuth = async () => {
   }
 };
 
-// Get current user from sessionStorage or cookies
+// Get current user - should use checkAuth() instead for security
+// This is kept for backward compatibility but should not be used
 export const getCurrentUser = () => {
-  // First try sessionStorage (faster)
-  const userStr = sessionStorage.getItem('taxcurb_user');
-  if (userStr) {
-    try {
-      return JSON.parse(userStr);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  // Fallback to cookie (if available)
-  const userCookie = getCookie('taxcurb_user');
-  if (userCookie) {
-    try {
-      return JSON.parse(decodeURIComponent(userCookie));
-    } catch (error) {
-      return null;
-    }
-  }
-
+  // Note: HTTP-only cookies cannot be accessed via JavaScript
+  // Use checkAuth() instead which calls the backend
+  // This function is kept for compatibility but returns null
   return null;
 };
 
