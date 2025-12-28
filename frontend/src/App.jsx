@@ -6,7 +6,14 @@ import HomeRedirect from './components/HomeRedirect'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
 import Filing from './pages/Filing'
+import Profile from './pages/Profile'
 import Residency from './pages/Residency'
+import VisaInfo from './pages/VisaInfo'
+import Income from './pages/Income'
+import IdentityTravelDocument from './pages/IdentityTravelDocument'
+import ProgramUSPresence from './pages/ProgramUSPresence'
+import PriorVisaHistory from './pages/PriorVisaHistory'
+import Address from './pages/Address'
 import Auth from './pages/Auth'
 import About from './pages/About'
 import Tutorial from './pages/Tutorial'
@@ -42,10 +49,66 @@ function App() {
             } 
           />
           <Route 
+            path="/filing/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/filing/residency" 
             element={
               <ProtectedRoute>
                 <Residency />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/visa_status" 
+            element={
+              <ProtectedRoute>
+                <VisaInfo />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/income" 
+            element={
+              <ProtectedRoute>
+                <Income />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/identity&Traveldocument" 
+            element={
+              <ProtectedRoute>
+                <IdentityTravelDocument />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/program&USpresence" 
+            element={
+              <ProtectedRoute>
+                <ProgramUSPresence />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/prior_visa_history" 
+            element={
+              <ProtectedRoute>
+                <PriorVisaHistory />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/address" 
+            element={
+              <ProtectedRoute>
+                <Address />
               </ProtectedRoute>
             } 
           />

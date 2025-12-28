@@ -8,7 +8,7 @@ function Filing() {
 
   const handleGetStarted = () => {
     if (agreedToTerms) {
-      navigate('/filing/residency')
+      navigate('/filing/profile')
     }
   }
 

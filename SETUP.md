@@ -18,7 +18,7 @@ TaxCurb uses a **backend-centric architecture** where all Firebase operations an
    ```
    
    Create `.env` with your Firebase configuration:
-   ```env
+   ```envle
    # Server Configuration
    PORT=3001
    FRONTEND_URL=http://localhost:5173

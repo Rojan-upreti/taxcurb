@@ -11,13 +11,6 @@ function Onboarding() {
   // Questionnaire state
   const [taxYear, setTaxYear] = useState('2025')
   const [usPresence, setUsPresence] = useState(null)
-  const [filingStatus, setFilingStatus] = useState('')
-  const [visaType, setVisaType] = useState('')
-  const [daysInUS, setDaysInUS] = useState('')
-  const [hasW2, setHasW2] = useState(null)
-  const [has1042S, setHas1042S] = useState(null)
-  const [hasOtherIncome, setHasOtherIncome] = useState(null)
-  const [state, setState] = useState('')
   
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
@@ -25,10 +18,6 @@ function Onboarding() {
   const steps = [
     { id: 1, title: 'Tax Year', completed: !!taxYear },
     { id: 2, title: 'US Presence', completed: usPresence !== null },
-    { id: 3, title: 'Filing Status', completed: !!filingStatus },
-    { id: 4, title: 'Visa Info', completed: !!visaType && !!daysInUS },
-    { id: 5, title: 'Income Sources', completed: hasW2 !== null && has1042S !== null && hasOtherIncome !== null },
-    { id: 6, title: 'State', completed: !!state },
   ]
 
   // Load saved data on mount
@@ -38,13 +27,6 @@ function Onboarding() {
       if (saved && saved.answers) {
         setTaxYear(saved.taxYear || taxYear)
         setUsPresence(saved.answers.usPresence || null)
-        setFilingStatus(saved.answers.filingStatus || '')
-        setVisaType(saved.answers.visaType || '')
-        setDaysInUS(saved.answers.daysInUS || '')
-        setHasW2(saved.answers.hasW2 ?? null)
-        setHas1042S(saved.answers.has1042S ?? null)
-        setHasOtherIncome(saved.answers.hasOtherIncome ?? null)
-        setState(saved.answers.state || '')
       }
       setIsLoading(false)
     }
@@ -56,23 +38,13 @@ function Onboarding() {
       const answers = {
         taxYear,
         usPresence,
-        filingStatus,
-        visaType,
-        daysInUS,
-        hasW2,
-        has1042S,
-        hasOtherIncome,
-        state,
       }
       saveOnboardingData(currentUser.uid, taxYear, answers)
     }
-  }, [taxYear, usPresence, filingStatus, visaType, daysInUS, hasW2, has1042S, hasOtherIncome, state, currentUser, isLoading])
+  }, [taxYear, usPresence, currentUser, isLoading])
 
   const handleUsPresenceChange = (value) => {
     setUsPresence(value)
-    if (value === 'yes' && currentStep === 2) {
-      setTimeout(() => setCurrentStep(3), 500)
-    }
   }
 
   const handleComplete = () => {
@@ -80,16 +52,9 @@ function Onboarding() {
       const answers = {
         taxYear,
         usPresence,
-        filingStatus,
-        visaType,
-        daysInUS,
-        hasW2,
-        has1042S,
-        hasOtherIncome,
-        state,
       }
       saveOnboardingData(currentUser.uid, taxYear, answers)
-      navigate('/dashboard')
+      navigate('/filing')
     }
   }
 
@@ -259,10 +224,10 @@ function Onboarding() {
                   {usPresence === 'yes' && (
                     <div className="flex justify-center pt-4">
                       <button
-                        onClick={() => setCurrentStep(3)}
+                        onClick={handleComplete}
                         className="px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink"
                       >
-                        Continue →
+                        Start Filing →
                       </button>
                     </div>
                   )}
@@ -271,318 +236,6 @@ function Onboarding() {
             </div>
           )}
 
-          {/* Step 3: Filing Status */}
-          {currentStep === 3 && (
-            <div className="space-y-8 max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-ink text-white font-semibold text-lg mb-4">
-                  3
-                </div>
-                <h2 className="text-3xl font-semibold text-ink mb-3">Filing Status</h2>
-                <p className="text-slate-700 text-lg">What is your filing status for {taxYear}?</p>
-              </div>
-              
-              <div className="max-w-md mx-auto space-y-4">
-                {['Single', 'Married Filing Jointly', 'Married Filing Separately', 'Head of Household'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => {
-                      setFilingStatus(status)
-                      setTimeout(() => setCurrentStep(4), 300)
-                    }}
-                    className={`w-full px-6 py-4 text-left border transition-colors ${
-                      filingStatus === status
-                        ? 'bg-ink text-white border-ink'
-                        : 'bg-white text-ink border-slate-300 hover:bg-stone-50'
-                    }`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex justify-center pt-4">
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="px-6 py-2 text-sm text-slate-600 hover:text-ink"
-                >
-                  ← Back
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Visa Information */}
-          {currentStep === 4 && (
-            <div className="space-y-8 max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-ink text-white font-semibold text-lg mb-4">
-                  4
-                </div>
-                <h2 className="text-3xl font-semibold text-ink mb-3">Visa Information</h2>
-                <p className="text-slate-700 text-lg">Tell us about your visa status.</p>
-              </div>
-              
-              <div className="max-w-md mx-auto space-y-6">
-                <div>
-                  <label htmlFor="visa-type" className="block text-sm font-semibold text-ink mb-3 uppercase tracking-wide">
-                    Visa Type
-                  </label>
-                  <select
-                    id="visa-type"
-                    value={visaType}
-                    onChange={(e) => setVisaType(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink"
-                  >
-                    <option value="">Select visa type</option>
-                    <option value="F-1">F-1 (Student)</option>
-                    <option value="J-1">J-1 (Exchange Visitor)</option>
-                    <option value="M-1">M-1 (Vocational Student)</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="days-in-us" className="block text-sm font-semibold text-ink mb-3 uppercase tracking-wide">
-                    Days in US during {taxYear}
-                  </label>
-                  <input
-                    type="number"
-                    id="days-in-us"
-                    value={daysInUS}
-                    onChange={(e) => setDaysInUS(e.target.value)}
-                    min="0"
-                    max="366"
-                    placeholder="e.g., 365"
-                    className="w-full px-4 py-3 border border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink"
-                  />
-                  <p className="text-xs text-slate-600 mt-2">Enter the number of days you were physically present in the US</p>
-                </div>
-              </div>
-
-              <div className="flex justify-center gap-4 pt-4">
-                <button
-                  onClick={() => setCurrentStep(3)}
-                  className="px-6 py-2 text-sm text-slate-600 hover:text-ink"
-                >
-                  ← Back
-                </button>
-                {visaType && daysInUS && (
-                  <button
-                    onClick={() => setCurrentStep(5)}
-                    className="px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink"
-                  >
-                    Continue →
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Step 5: Income Sources */}
-          {currentStep === 5 && (
-            <div className="space-y-8 max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-ink text-white font-semibold text-lg mb-4">
-                  5
-                </div>
-                <h2 className="text-3xl font-semibold text-ink mb-3">Income Sources</h2>
-                <p className="text-slate-700 text-lg">Do you have income from any of these sources?</p>
-              </div>
-              
-              <div className="max-w-md mx-auto space-y-4">
-                <div className="bg-white border border-slate-300 p-6">
-                  <h3 className="font-semibold text-ink mb-4">W-2 Forms (Wages)</h3>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setHasW2(true)}
-                      className={`flex-1 px-6 py-3 border transition-colors ${
-                        hasW2 === true
-                          ? 'bg-ink text-white border-ink'
-                          : 'bg-white text-ink border-slate-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      onClick={() => setHasW2(false)}
-                      className={`flex-1 px-6 py-3 border transition-colors ${
-                        hasW2 === false
-                          ? 'bg-ink text-white border-ink'
-                          : 'bg-white text-ink border-slate-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      No
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-slate-300 p-6">
-                  <h3 className="font-semibold text-ink mb-4">1042-S Forms (Scholarships/Fellowships)</h3>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setHas1042S(true)}
-                      className={`flex-1 px-6 py-3 border transition-colors ${
-                        has1042S === true
-                          ? 'bg-ink text-white border-ink'
-                          : 'bg-white text-ink border-slate-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      onClick={() => setHas1042S(false)}
-                      className={`flex-1 px-6 py-3 border transition-colors ${
-                        has1042S === false
-                          ? 'bg-ink text-white border-ink'
-                          : 'bg-white text-ink border-slate-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      No
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-slate-300 p-6">
-                  <h3 className="font-semibold text-ink mb-4">Other Income (1099, Interest, Dividends, etc.)</h3>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setHasOtherIncome(true)}
-                      className={`flex-1 px-6 py-3 border transition-colors ${
-                        hasOtherIncome === true
-                          ? 'bg-ink text-white border-ink'
-                          : 'bg-white text-ink border-slate-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      onClick={() => setHasOtherIncome(false)}
-                      className={`flex-1 px-6 py-3 border transition-colors ${
-                        hasOtherIncome === false
-                          ? 'bg-ink text-white border-ink'
-                          : 'bg-white text-ink border-slate-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      No
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-center gap-4 pt-4">
-                <button
-                  onClick={() => setCurrentStep(4)}
-                  className="px-6 py-2 text-sm text-slate-600 hover:text-ink"
-                >
-                  ← Back
-                </button>
-                {hasW2 !== null && has1042S !== null && hasOtherIncome !== null && (
-                  <button
-                    onClick={() => setCurrentStep(6)}
-                    className="px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink"
-                  >
-                    Continue →
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Step 6: State */}
-          {currentStep === 6 && (
-            <div className="space-y-8 max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-ink text-white font-semibold text-lg mb-4">
-                  6
-                </div>
-                <h2 className="text-3xl font-semibold text-ink mb-3">State of Residence</h2>
-                <p className="text-slate-700 text-lg">Which state were you a resident of during {taxYear}?</p>
-              </div>
-              
-              <div className="max-w-md mx-auto">
-                <label htmlFor="state" className="block text-sm font-semibold text-ink mb-3 uppercase tracking-wide">
-                  State
-                </label>
-                <select
-                  id="state"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink"
-                >
-                  <option value="">Select state</option>
-                  <option value="AL">Alabama</option>
-                  <option value="AK">Alaska</option>
-                  <option value="AZ">Arizona</option>
-                  <option value="AR">Arkansas</option>
-                  <option value="CA">California</option>
-                  <option value="CO">Colorado</option>
-                  <option value="CT">Connecticut</option>
-                  <option value="DE">Delaware</option>
-                  <option value="FL">Florida</option>
-                  <option value="GA">Georgia</option>
-                  <option value="HI">Hawaii</option>
-                  <option value="ID">Idaho</option>
-                  <option value="IL">Illinois</option>
-                  <option value="IN">Indiana</option>
-                  <option value="IA">Iowa</option>
-                  <option value="KS">Kansas</option>
-                  <option value="KY">Kentucky</option>
-                  <option value="LA">Louisiana</option>
-                  <option value="ME">Maine</option>
-                  <option value="MD">Maryland</option>
-                  <option value="MA">Massachusetts</option>
-                  <option value="MI">Michigan</option>
-                  <option value="MN">Minnesota</option>
-                  <option value="MS">Mississippi</option>
-                  <option value="MO">Missouri</option>
-                  <option value="MT">Montana</option>
-                  <option value="NE">Nebraska</option>
-                  <option value="NV">Nevada</option>
-                  <option value="NH">New Hampshire</option>
-                  <option value="NJ">New Jersey</option>
-                  <option value="NM">New Mexico</option>
-                  <option value="NY">New York</option>
-                  <option value="NC">North Carolina</option>
-                  <option value="ND">North Dakota</option>
-                  <option value="OH">Ohio</option>
-                  <option value="OK">Oklahoma</option>
-                  <option value="OR">Oregon</option>
-                  <option value="PA">Pennsylvania</option>
-                  <option value="RI">Rhode Island</option>
-                  <option value="SC">South Carolina</option>
-                  <option value="SD">South Dakota</option>
-                  <option value="TN">Tennessee</option>
-                  <option value="TX">Texas</option>
-                  <option value="UT">Utah</option>
-                  <option value="VT">Vermont</option>
-                  <option value="VA">Virginia</option>
-                  <option value="WA">Washington</option>
-                  <option value="WV">West Virginia</option>
-                  <option value="WI">Wisconsin</option>
-                  <option value="WY">Wyoming</option>
-                  <option value="DC">District of Columbia</option>
-                </select>
-              </div>
-
-              <div className="flex justify-center gap-4 pt-6">
-                <button
-                  onClick={() => setCurrentStep(5)}
-                  className="px-6 py-2 text-sm text-slate-600 hover:text-ink"
-                >
-                  ← Back
-                </button>
-                {state && (
-                  <button
-                    onClick={handleComplete}
-                    className="px-8 py-4 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border border-ink"
-                  >
-                    Complete →
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
 
         </div>
       </main>
