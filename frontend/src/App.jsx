@@ -15,6 +15,7 @@ import ProgramUSPresence from './pages/ProgramUSPresence'
 import PriorVisaHistory from './pages/PriorVisaHistory'
 import Address from './pages/Address'
 import Review from './pages/Review'
+import ResetPassword from './pages/ResetPassword'
 import Auth from './pages/Auth'
 import About from './pages/About'
 import Tutorial from './pages/Tutorial'
@@ -122,6 +123,7 @@ function App() {
             } 
           />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/about" element={<About />} />
           <Route path="/tutorial" element={<Tutorial />} />
         </Routes>
