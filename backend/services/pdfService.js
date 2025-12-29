@@ -91,7 +91,7 @@ function getFieldMappings(formData) {
   
   // f1_01 to f1_34: Text fields
   // Personal Information Section
-  if (formData) {
+  if (formData.firstName) {
     mappings['topmostSubform[0].Page1[0].f1_01[0]'] = formData.firstName;
   }
   if (formData.middleName) {
