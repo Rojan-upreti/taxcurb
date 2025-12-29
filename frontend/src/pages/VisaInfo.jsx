@@ -66,7 +66,7 @@ function VisaStatus() {
   const handleContinue = () => {
     if (allFieldsCompleted) {
       saveToCache() // Ensure data is saved before navigation
-      navigate('/filing/income')
+      navigate('/filing/identity&Traveldocument')
     }
   }
 

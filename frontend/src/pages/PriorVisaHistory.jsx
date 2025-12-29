@@ -154,8 +154,8 @@ function PriorVisaHistory() {
     (hasChangedStatus === 'no' || (hasChangedStatus === 'yes' && Object.values(visaHistory).every(value => value !== '')))
 
   const completedPages = allFieldsCompleted 
-    ? ['profile', 'residency', 'visa_status', 'income', 'identity_travel', 'program_presence', 'prior_visa_history']
-    : ['profile', 'residency', 'visa_status', 'income', 'identity_travel', 'program_presence']
+    ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history']
+    : ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence']
 
   const visaTypes = ['F-1', 'J-1', 'M-1', 'Q', 'Not in U.S.']
 

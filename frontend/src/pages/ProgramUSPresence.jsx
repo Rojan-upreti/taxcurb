@@ -225,8 +225,8 @@ function ProgramUSPresence() {
     validatePhone(dsoPhone)
 
   const completedPages = allFieldsCompleted 
-    ? ['profile', 'residency', 'visa_status', 'income', 'identity_travel', 'program_presence']
-    : ['profile', 'residency', 'visa_status', 'income', 'identity_travel']
+    ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence']
+    : ['profile', 'residency', 'visa_status', 'identity_travel']
 
   // US States list
   const usStates = [

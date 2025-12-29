@@ -9,8 +9,6 @@ function IdentityTravelDocument() {
   const navigate = useNavigate()
   const location = useLocation()
   
-  const [hasSSN, setHasSSN] = useState(null)
-  const [ssn, setSSN] = useState('')
   const [passports, setPassports] = useState([{ country: '', number: '' }])
   const [hasMultiplePassports, setHasMultiplePassports] = useState(null)
   const [allCitizenships, setAllCitizenships] = useState([])
@@ -18,13 +16,19 @@ function IdentityTravelDocument() {
 
   // Save function to ensure data is saved
   const saveToCache = () => {
-    const data = {
-      hasSSN,
-      ssn: hasSSN === 'yes' ? ssn : '',
-      passports: passports.length > 0 ? passports : [{ country: '', number: '' }], // Always save full array
-      hasMultiplePassports
+    try {
+      const data = {
+        passports: passports.length > 0 ? passports : [{ country: '', number: '' }], // Always save full array
+        hasMultiplePassports
+      }
+      localStorage.setItem('filing_identity_travel', JSON.stringify(data))
+    } catch (e) {
+      console.error('Error saving identity travel data to cache:', e)
+      // Handle quota exceeded error gracefully
+      if (e.name === 'QuotaExceededError') {
+        console.warn('localStorage quota exceeded. Consider clearing old data.')
+      }
     }
-    localStorage.setItem('filing_identity_travel', JSON.stringify(data))
   }
 
   // Load profile data to get all citizenships and cached identity data
@@ -37,8 +41,6 @@ function IdentityTravelDocument() {
       const cached = localStorage.getItem('filing_identity_travel')
       if (cached) {
         const data = JSON.parse(cached)
-        setHasSSN(data.hasSSN ?? null)
-        setSSN(data.ssn || '')
         setHasMultiplePassports(data.hasMultiplePassports ?? null)
         if (data.passports && data.passports.length > 0) {
           setPassports(data.passports)
@@ -78,22 +80,7 @@ function IdentityTravelDocument() {
   useEffect(() => {
     if (!hasLoadedFromCache.current) return
     saveToCache()
-  }, [hasSSN, ssn, passports, hasMultiplePassports])
-
-  const handleSSNChange = (value) => {
-    // Format SSN as XXX-XX-XXXX
-    const cleaned = value.replace(/\D/g, '')
-    if (cleaned.length <= 9) {
-      let formatted = cleaned
-      if (cleaned.length > 3) {
-        formatted = cleaned.slice(0, 3) + '-' + cleaned.slice(3)
-      }
-      if (cleaned.length > 5) {
-        formatted = cleaned.slice(0, 3) + '-' + cleaned.slice(3, 5) + '-' + cleaned.slice(5, 9)
-      }
-      setSSN(formatted)
-    }
-  }
+  }, [passports, hasMultiplePassports])
 
   const handlePassportChange = (index, field, value) => {
     const updated = [...passports]
@@ -120,20 +107,19 @@ function IdentityTravelDocument() {
   }
 
   // Check if any passport country is United States
-  const hasUSPassport = passports.some(p => p.country === 'United States')
+  const hasUSPassport = passports.length > 0 && passports.some(p => p.country === 'United States')
 
   const allFieldsCompleted = 
-    hasSSN !== null &&
-    (hasSSN === 'no' || (hasSSN === 'yes' && ssn.length === 11)) &&
     hasMultiplePassports !== null &&
+    passports.length > 0 &&
     passports[0].country !== '' &&
     passports[0].number !== '' &&
     !hasUSPassport &&
     (hasMultiplePassports === 'no' || (hasMultiplePassports === 'yes' && passports.slice(1).every(p => p.country !== '' && p.number !== '' && p.country !== 'United States')))
 
   const completedPages = allFieldsCompleted 
-    ? ['profile', 'residency', 'visa_status', 'income', 'identity_travel']
-    : ['profile', 'residency', 'visa_status', 'income']
+    ? ['profile', 'residency', 'visa_status', 'identity_travel']
+    : ['profile', 'residency', 'visa_status']
 
   // List of countries
   const countries = [
@@ -350,67 +336,34 @@ function IdentityTravelDocument() {
             </div>
 
             <div className="space-y-4">
-              {/* SSN Question */}
-              <QuestionCard>
-                <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
-                  Do you have SSN?
-                </h2>
-                <YesNoButtons 
-                  value={hasSSN} 
-                  onChange={(value) => {
-                    setHasSSN(value)
-                    setTimeout(saveToCache, 100)
-                  }} 
-                />
-              </QuestionCard>
-
-              {/* SSN Input */}
-              {hasSSN === 'yes' && (
-                <QuestionCard>
-                  <label className="block text-sm font-semibold text-ink mb-3">
-                    SSN *
-                  </label>
-                  <input
-                    type="text"
-                    value={ssn}
-                    onChange={(e) => handleSSNChange(e.target.value)}
-                    onBlur={saveToCache}
-                    placeholder="XXX-XX-XXXX"
-                    maxLength={11}
-                    className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                  />
-                  <p className="text-xs text-slate-600 mt-2">
-                    Format: XXX-XX-XXXX
-                  </p>
-                </QuestionCard>
-              )}
-
               {/* Passport Information */}
               <QuestionCard>
                 <h3 className="text-sm font-semibold text-ink mb-4">Passport Information</h3>
                 <div className="space-y-4">
                   {/* First Passport */}
-                  <div>
-                    <label className="block text-xs font-semibold text-ink mb-2">
-                      Passport Issuing Country *
-                    </label>
-                    <select
-                      value={passports[0].country}
-                      onChange={(e) => {
-                        handlePassportChange(0, 'country', e.target.value)
-                        setTimeout(saveToCache, 100)
-                      }}
-                      onBlur={saveToCache}
-                      className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                    >
-                      <option value="">Select country</option>
-                      {countries.map((country) => (
-                        <option key={country} value={country}>
-                          {country}
-                        </option>
-                      ))}
-                    </select>
-                    {passports[0].country === 'United States' && (
+                  {passports.length > 0 && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-2">
+                          Passport Issuing Country *
+                        </label>
+                        <select
+                          value={passports[0].country}
+                          onChange={(e) => {
+                            handlePassportChange(0, 'country', e.target.value)
+                            setTimeout(saveToCache, 100)
+                          }}
+                          onBlur={saveToCache}
+                          className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
+                        >
+                          <option value="">Select country</option>
+                          {countries.map((country) => (
+                            <option key={country} value={country}>
+                              {country}
+                            </option>
+                          ))}
+                        </select>
+                        {passports[0].country === 'United States' && (
                       <div className="mt-3 bg-stone-100 border border-slate-300 p-4 text-center rounded-3xl">
                         <div className="flex justify-center mb-2">
                           <svg className="w-8 h-8 text-ink" fill="currentColor" viewBox="0 0 20 20">
@@ -425,23 +378,25 @@ function IdentityTravelDocument() {
                         </p>
                       </div>
                     )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-ink mb-2">
-                      Passport Number *
-                    </label>
-                    <input
-                      type="text"
-                      value={passports[0].number}
-                      onChange={(e) => {
-                        handlePassportChange(0, 'number', e.target.value)
-                        setTimeout(saveToCache, 100)
-                      }}
-                      onBlur={saveToCache}
-                      className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                      placeholder="Enter passport number"
-                    />
-                  </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-2">
+                          Passport Number *
+                        </label>
+                        <input
+                          type="text"
+                          value={passports[0].number}
+                          onChange={(e) => {
+                            handlePassportChange(0, 'number', e.target.value)
+                            setTimeout(saveToCache, 100)
+                          }}
+                          onBlur={saveToCache}
+                          className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
+                          placeholder="Enter passport number"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </QuestionCard>
 
@@ -560,7 +515,7 @@ function IdentityTravelDocument() {
               {/* Navigation Buttons */}
               <div className="flex justify-between gap-3 pt-2">
                 <button
-                  onClick={() => navigate('/filing/income')}
+                  onClick={() => navigate('/filing/visa_status')}
                   className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
                 >
                   ← Back

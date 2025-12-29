@@ -14,6 +14,7 @@ import IdentityTravelDocument from './pages/IdentityTravelDocument'
 import ProgramUSPresence from './pages/ProgramUSPresence'
 import PriorVisaHistory from './pages/PriorVisaHistory'
 import Address from './pages/Address'
+import Review from './pages/Review'
 import Auth from './pages/Auth'
 import About from './pages/About'
 import Tutorial from './pages/Tutorial'
@@ -109,6 +110,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Address />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/review" 
+            element={
+              <ProtectedRoute>
+                <Review />
               </ProtectedRoute>
             } 
           />

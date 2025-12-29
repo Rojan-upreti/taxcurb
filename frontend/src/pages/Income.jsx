@@ -10,6 +10,8 @@ function Income() {
   const location = useLocation()
   
   const [hasIncome, setHasIncome] = useState(null)
+  const [hasSSN, setHasSSN] = useState(null)
+  const [ssn, setSSN] = useState('')
   const hasLoadedFromCache = useRef(false)
 
   // Load visa status data from localStorage (or context in future)
@@ -67,10 +69,21 @@ function Income() {
   // Save function to ensure data is saved
   const saveToCache = () => {
     if (hasIncome !== null) {
-      const incomeData = {
-        hasIncome
+      try {
+        const incomeData = {
+          hasIncome,
+          hasSSN: hasIncome === 'no' ? hasSSN : null,
+          // Only save SSN if user has one and it's properly formatted
+          ssn: hasIncome === 'no' && hasSSN === 'yes' && ssn.length === 11 ? ssn : ''
+        }
+        localStorage.setItem('filing_income', JSON.stringify(incomeData))
+      } catch (e) {
+        console.error('Error saving income data to cache:', e)
+        // Handle quota exceeded error gracefully
+        if (e.name === 'QuotaExceededError') {
+          console.warn('localStorage quota exceeded. Consider clearing old data.')
+        }
       }
-      localStorage.setItem('filing_income', JSON.stringify(incomeData))
     }
   }
 
@@ -82,6 +95,10 @@ function Income() {
       if (cached) {
         const data = JSON.parse(cached)
         setHasIncome(data.hasIncome ?? null)
+        if (data.hasIncome === 'no') {
+          setHasSSN(data.hasSSN ?? null)
+          setSSN(data.ssn || '')
+        }
       }
       setTimeout(() => {
         hasLoadedFromCache.current = true
@@ -98,18 +115,45 @@ function Income() {
   useEffect(() => {
     if (!hasLoadedFromCache.current) return
     saveToCache()
-  }, [hasIncome])
+  }, [hasIncome, hasSSN, ssn])
 
-  const handleContinue = () => {
-    if (hasIncome === 'no') {
-      saveToCache() // Ensure data is saved before navigation
-      navigate('/filing/identity&Traveldocument')
+  const handleSSNChange = (value) => {
+    // Sanitize input - only allow digits and hyphens
+    const sanitized = value.replace(/[^\d-]/g, '')
+    // Format SSN as XXX-XX-XXXX
+    const cleaned = sanitized.replace(/\D/g, '')
+    if (cleaned.length <= 9) {
+      let formatted = cleaned
+      if (cleaned.length > 3) {
+        formatted = cleaned.slice(0, 3) + '-' + cleaned.slice(3)
+      }
+      if (cleaned.length > 5) {
+        formatted = cleaned.slice(0, 3) + '-' + cleaned.slice(3, 5) + '-' + cleaned.slice(5, 9)
+      }
+      setSSN(formatted)
     }
   }
 
-  const completedPages = hasIncome !== null
-    ? ['profile', 'residency', 'visa_status', 'income']
-    : ['profile', 'residency', 'visa_status']
+  const handleContinue = () => {
+    if (hasIncome === 'no') {
+      // Validate SSN if user said they have one
+      if (hasSSN === 'yes' && ssn.length !== 11) {
+        return // Don't proceed if SSN is required but not provided
+      }
+      saveToCache() // Ensure data is saved before navigation
+      navigate('/filing/review')
+    }
+  }
+
+  const allFieldsCompleted = hasIncome === 'no' 
+    ? (hasSSN !== null && (hasSSN === 'no' || (hasSSN === 'yes' && ssn.length === 11)))
+    : hasIncome === 'yes'
+
+  const completedPages = allFieldsCompleted
+    ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history', 'address', 'income']
+    : hasIncome !== null
+    ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history', 'address']
+    : ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history', 'address']
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -176,18 +220,67 @@ function Income() {
                 </QuestionCard>
               )}
 
+              {/* SSN Question - Show when user selects No for income */}
+              {hasIncome === 'no' && (!visaData || wasInUSAIn2025()) && (
+                <>
+                  <QuestionCard>
+                    <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
+                      Do you have SSN?
+                    </h2>
+                    <YesNoButtons 
+                      value={hasSSN} 
+                      onChange={(value) => {
+                        setHasSSN(value)
+                        setTimeout(saveToCache, 100)
+                      }} 
+                    />
+                  </QuestionCard>
+
+                  {/* SSN Input */}
+                  {hasSSN === 'yes' && (
+                    <QuestionCard>
+                      <label className="block text-sm font-semibold text-ink mb-3">
+                        SSN *
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={ssn}
+                        onChange={(e) => {
+                          handleSSNChange(e.target.value)
+                          setTimeout(saveToCache, 100)
+                        }}
+                        onBlur={saveToCache}
+                        placeholder="XXX-XX-XXXX"
+                        maxLength={11}
+                        pattern="[0-9]{3}-[0-9]{2}-[0-9]{4}"
+                        className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
+                      />
+                      <p className="text-xs text-slate-600 mt-2">
+                        Format: XXX-XX-XXXX
+                      </p>
+                    </QuestionCard>
+                  )}
+                </>
+              )}
+
               {/* No Income Path - Show continue button with back button */}
               {hasIncome === 'no' && (!visaData || wasInUSAIn2025()) && (
                 <div className="flex justify-between gap-3 pt-2">
                   <button
-                    onClick={() => navigate('/filing/visa_status')}
+                    onClick={() => navigate('/filing/address')}
                     className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
                   >
                     ← Back
                   </button>
                   <button
                     onClick={handleContinue}
-                    className="px-6 py-2 bg-ink text-white text-xs font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
+                    disabled={!allFieldsCompleted}
+                    className={`px-6 py-2 text-xs font-medium transition-all border-2 rounded-full ${
+                      allFieldsCompleted
+                        ? 'bg-ink text-white hover:bg-slate-800 border-ink cursor-pointer'
+                        : 'bg-slate-300 text-slate-500 border-slate-300 cursor-not-allowed'
+                    }`}
                   >
                     Continue →
                   </button>
@@ -207,7 +300,7 @@ function Income() {
               {(hasIncome === null || hasIncome === 'yes') && (
                 <div className="flex justify-between gap-3 pt-2">
                   <button
-                    onClick={() => navigate('/filing/visa_status')}
+                    onClick={() => navigate('/filing/address')}
                     className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
                   >
                     ← Back

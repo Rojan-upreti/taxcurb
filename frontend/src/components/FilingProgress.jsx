@@ -5,11 +5,11 @@ function FilingProgress({ currentPage, completedPages = [] }) {
     { id: 'profile', name: 'Profile', path: '/filing/profile' },
     { id: 'residency', name: 'Residency', path: '/filing/residency' },
     { id: 'visa_status', name: 'Visa Status', path: '/filing/visa_status' },
-    { id: 'income', name: 'Income', path: '/filing/income' },
     { id: 'identity_travel', name: 'Identity & Travel', path: '/filing/identity&Traveldocument' },
     { id: 'program_presence', name: 'Program & Presence', path: '/filing/program&USpresence' },
     { id: 'prior_visa_history', name: 'Prior Visa History', path: '/filing/prior_visa_history' },
     { id: 'address', name: 'Address', path: '/filing/address' },
+    { id: 'income', name: 'Income', path: '/filing/income' },
   ]
 
   const totalPages = allPages.length

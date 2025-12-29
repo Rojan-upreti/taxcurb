@@ -90,8 +90,7 @@ function Address() {
   const handleContinue = () => {
     if (allFieldsCompleted) {
       saveToCache() // Ensure data is saved before navigation
-      // Navigate to completion or summary page
-      // navigate('/filing/summary')
+      navigate('/filing/income')
     }
   }
 
@@ -105,8 +104,8 @@ function Address() {
     validateZIP(usZip)
 
   const completedPages = allFieldsCompleted 
-    ? ['profile', 'residency', 'visa_status', 'income', 'identity_travel', 'program_presence', 'prior_visa_history', 'address']
-    : ['profile', 'residency', 'visa_status', 'income', 'identity_travel', 'program_presence', 'prior_visa_history']
+    ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history', 'address']
+    : ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history']
 
   // List of countries
   const countries = [
