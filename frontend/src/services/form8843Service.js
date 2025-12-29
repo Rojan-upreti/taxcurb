@@ -2,7 +2,7 @@
  * Service for Form 8843 PDF generation
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
  * Collect all form data from localStorage
@@ -131,7 +131,7 @@ export const generateForm8843 = async (formData) => {
     
     // Provide user-friendly error messages
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      throw new Error('Cannot connect to server. Please make sure the backend is running on port 5000.');
+      throw new Error('Cannot connect to server. Please make sure the backend is running on port 3001.');
     }
     
     throw error;
