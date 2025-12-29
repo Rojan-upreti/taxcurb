@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
+import Form8843Preview from '../components/Form8843Preview'
 
 function Review() {
   const navigate = useNavigate()
@@ -467,10 +468,15 @@ function Review() {
                 </QuestionCard>
               )}
 
+              {/* Form 8843 Preview Section */}
+              <div className="mt-8 pt-8 border-t border-slate-300">
+                <Form8843Preview />
+              </div>
+
               {/* Navigation Buttons */}
               <div className="flex justify-between gap-3 pt-4">
                 <button
-                  onClick={() => navigate('/filing/income')}
+                  onClick={() => navigate('/filing/address')}
                   className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
                 >
                   ← Back

@@ -400,10 +400,68 @@ app.post('/api/auth/verify', async (req, res) => {
   }
 });
 
+// PDF Generation Endpoint
+app.post('/api/forms/8843/generate', async (req, res) => {
+  try {
+    const formData = req.body;
+    
+    console.log('\n=== Form 8843 Generation Request ===');
+    console.log('Received form data for:', formData.firstName, formData.lastName);
+    
+    const { fillForm8843 } = await import('./services/pdfService.js');
+    const pdfBytes = await fillForm8843(formData);
+    
+    const base64PDF = Buffer.from(pdfBytes).toString('base64');
+    
+    console.log('✓ PDF generated successfully\n');
+    
+    res.json({
+      success: true,
+      pdf: base64PDF,
+      message: 'Form 8843 generated successfully'
+    });
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    
+    let errorMessage = 'Failed to generate PDF';
+    if (error.message.includes('XFA') || error.message.includes('removing')) {
+      errorMessage = 'PDF uses XFA format. The form will still work, but XFA data is removed.';
+    } else {
+      errorMessage = error.message || 'Failed to generate PDF';
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: errorMessage 
+    });
+  }
+});
+
+// PDF Field Inspection Endpoint (for debugging)
+app.get('/api/forms/8843/fields', async (req, res) => {
+  try {
+    const { getPDFFieldNames } = await import('./services/pdfService.js');
+    const fields = await getPDFFieldNames();
+    
+    res.json({
+      success: true,
+      fields: fields,
+      count: fields.length
+    });
+  } catch (error) {
+    console.error('Field inspection error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`PDF fields: http://localhost:${PORT}/api/forms/8843/fields`);
   if (!FIREBASE_API_KEY) {
     console.warn('WARNING: FIREBASE_API_KEY not found in .env file');
   }
