@@ -437,6 +437,76 @@ app.post('/api/forms/8843/generate', async (req, res) => {
   }
 });
 
+// Forgot password endpoint - sends reset email
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        error: 'Email is required' 
+      });
+    }
+
+    // Validate and sanitize email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const sanitizedEmail = email.trim().toLowerCase();
+    if (!emailRegex.test(sanitizedEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (!FIREBASE_API_KEY) {
+      return res.status(500).json({ 
+        error: 'Password reset service is not configured' 
+      });
+    }
+
+    // Use Firebase REST API to send password reset email
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${FIREBASE_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestType: 'PASSWORD_RESET',
+          email: sanitizedEmail,
+          continueUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password`,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Don't reveal if email exists or not (security best practice)
+      if (data.error?.message?.includes('EMAIL_NOT_FOUND')) {
+        // Still return success to prevent email enumeration
+        return res.json({
+          success: true,
+          message: 'If an account exists with this email, a password reset link has been sent.',
+        });
+      }
+      
+      throw new Error(data.error?.message || 'Failed to send reset email');
+    }
+
+    // Always return success message (don't reveal if email exists)
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, a password reset link has been sent.',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    // Still return success to prevent email enumeration
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, a password reset link has been sent.',
+    });
+  }
+});
+
 // PDF Field Inspection Endpoint (for debugging)
 app.get('/api/forms/8843/fields', async (req, res) => {
   try {
@@ -453,6 +523,81 @@ app.get('/api/forms/8843/fields', async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: error.message 
+    });
+  }
+});
+
+// Reset password endpoint - verifies code and updates password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { oobCode, newPassword } = req.body;
+
+    if (!oobCode || !newPassword) {
+      return res.status(400).json({ 
+        error: 'Reset code and new password are required' 
+      });
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        error: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    if (newPassword.length > 128) {
+      return res.status(400).json({ 
+        error: 'Password is too long' 
+      });
+    }
+
+    if (!FIREBASE_API_KEY) {
+      return res.status(500).json({ 
+        error: 'Password reset service is not configured' 
+      });
+    }
+
+    // Verify the reset code and reset password using Firebase REST API
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=${FIREBASE_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          oobCode,
+          newPassword,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (data.error?.message?.includes('EXPIRED_OOB_CODE')) {
+        return res.status(400).json({ 
+          error: 'This reset link has expired. Please request a new one.' 
+        });
+      }
+      
+      if (data.error?.message?.includes('INVALID_OOB_CODE')) {
+        return res.status(400).json({ 
+          error: 'Invalid or expired reset link. Please request a new one.' 
+        });
+      }
+
+      throw new Error(data.error?.message || 'Failed to reset password');
+    }
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now sign in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to reset password. Please try again.' 
     });
   }
 });
