@@ -82,164 +82,171 @@ export async function fillForm8843(formData) {
 
 /**
  * Map form data to PDF field names
- * Complete mapping for all 48 fields in Form 8843
+ * Updated mapping according to new specifications
  */
 function getFieldMappings(formData) {
   const mappings = {};
   
-  // ========== PAGE 1 FIELDS ==========
+  // ========== DEFAULT TAX YEAR FIELDS ==========
+  mappings['topmostSubform[0].Page1[0].f1_01[0]'] = '01/01';
+  mappings['topmostSubform[0].Page1[0].f1_02[0]'] = '12/31';
+  mappings['topmostSubform[0].Page1[0].f1_03[0]'] = '2025';
   
-  // f1_01 to f1_34: Text fields
-  // Personal Information Section
-  if (formData.firstName) {
-    mappings['topmostSubform[0].Page1[0].f1_01[0]'] = formData.firstName;
+  // ========== PERSONAL INFORMATION ==========
+  // f1_04: First name and initial (firstName + middleName)
+  const firstNameInitial = [formData.firstName, formData.middleName].filter(Boolean).join(' ').trim();
+  if (firstNameInitial) {
+    mappings['topmostSubform[0].Page1[0].f1_04[0]'] = firstNameInitial;
   }
-  if (formData.middleName) {
-    mappings['topmostSubform[0].Page1[0].f1_02[0]'] = formData.middleName;
-  }
+  
+  // f1_05: Last name
   if (formData.lastName) {
-    mappings['topmostSubform[0].Page1[0].f1_03[0]'] = formData.lastName;
+    mappings['topmostSubform[0].Page1[0].f1_05[0]'] = formData.lastName;
   }
+  
+  // f1_06: SSN/ITIN
   if (formData.ssn) {
     const formattedSSN = formatSSN(formData.ssn);
-    mappings['topmostSubform[0].Page1[0].f1_04[0]'] = formattedSSN;
-  }
-  if (formData.taxYear) {
-    mappings['topmostSubform[0].Page1[0].f1_05[0]'] = formData.taxYear;
-  }
-  if (formData.dateOfBirth) {
-    const formattedDate = formatDateForPDF(formData.dateOfBirth);
-    mappings['topmostSubform[0].Page1[0].f1_06[0]'] = formattedDate;
-  }
-  if (formData.countryOfCitizenship) {
-    mappings['topmostSubform[0].Page1[0].f1_07[0]'] = formData.countryOfCitizenship;
-  }
-  if (formData.visaType || formData.visaStatus) {
-    mappings['topmostSubform[0].Page1[0].f1_08[0]'] = formData.visaType || formData.visaStatus;
-  }
-  if (formData.dateEnteredUS) {
-    const formattedDate = formatDateForPDF(formData.dateEnteredUS);
-    mappings['topmostSubform[0].Page1[0].f1_09[0]'] = formattedDate;
-  }
-  if (formData.daysInUS || formData.daysInUSCalculated) {
-    mappings['topmostSubform[0].Page1[0].f1_10[0]'] = String(formData.daysInUS || formData.daysInUSCalculated);
+    mappings['topmostSubform[0].Page1[0].f1_06[0]'] = formattedSSN;
   }
   
-  // Foreign Address Section
-  if (formData.foreignAddressStreet1) {
-    mappings['topmostSubform[0].Page1[0].f1_11[0]'] = formData.foreignAddressStreet1;
-  }
-  if (formData.foreignAddressStreet2) {
-    mappings['topmostSubform[0].Page1[0].f1_12[0]'] = formData.foreignAddressStreet2;
-  }
-  if (formData.foreignAddressCity) {
-    mappings['topmostSubform[0].Page1[0].f1_13[0]'] = formData.foreignAddressCity;
-  }
-  if (formData.foreignAddressStateProvince) {
-    mappings['topmostSubform[0].Page1[0].f1_14[0]'] = formData.foreignAddressStateProvince;
-  }
-  if (formData.foreignAddressZip) {
-    mappings['topmostSubform[0].Page1[0].f1_15[0]'] = formData.foreignAddressZip;
-  }
-  if (formData.foreignAddressCountry) {
-    mappings['topmostSubform[0].Page1[0].f1_16[0]'] = formData.foreignAddressCountry;
+  // ========== ADDRESS FIELDS (COMBINED) ==========
+  // f1_07: Home country address
+  const homeCountryAddress = combineAddressFields(
+    formData.foreignAddressStreet1 || formData.residenceStreet1,
+    formData.foreignAddressStreet2 || formData.residenceStreet2,
+    formData.foreignAddressCity || formData.residenceCity,
+    formData.foreignAddressStateProvince || formData.residenceState,
+    formData.foreignAddressZip || formData.residenceZip,
+    formData.foreignAddressCountry || formData.countryOfResidence
+  );
+  if (homeCountryAddress) {
+    mappings['topmostSubform[0].Page1[0].f1_07[0]'] = homeCountryAddress;
   }
   
-  // US Address Section
-  if (formData.usAddressStreet1) {
-    mappings['topmostSubform[0].Page1[0].f1_17[0]'] = formData.usAddressStreet1;
-  }
-  if (formData.usAddressStreet2) {
-    mappings['topmostSubform[0].Page1[0].f1_18[0]'] = formData.usAddressStreet2;
-  }
-  if (formData.usAddressCity) {
-    mappings['topmostSubform[0].Page1[0].f1_19[0]'] = formData.usAddressCity;
-  }
-  if (formData.usAddressState) {
-    mappings['topmostSubform[0].Page1[0].f1_20[0]'] = formData.usAddressState;
-  }
-  if (formData.usAddressZip) {
-    mappings['topmostSubform[0].Page1[0].f1_21[0]'] = formData.usAddressZip;
+  // f1_08: US address
+  const usAddress = combineAddressFields(
+    formData.usAddressStreet1 || formData.usStreet1,
+    formData.usAddressStreet2 || formData.usStreet2,
+    formData.usAddressCity || formData.usCity,
+    formData.usAddressState || formData.usState,
+    formData.usAddressZip || formData.usZip,
+    null // No country for US address
+  );
+  if (usAddress) {
+    mappings['topmostSubform[0].Page1[0].f1_08[0]'] = usAddress;
   }
   
-  // Institution Information Section
-  if (formData.institutionName) {
-    mappings['topmostSubform[0].Page1[0].f1_22[0]'] = formData.institutionName;
-  }
-  if (formData.institutionStreet1) {
-    mappings['topmostSubform[0].Page1[0].f1_23[0]'] = formData.institutionStreet1;
-  }
-  if (formData.institutionStreet2) {
-    mappings['topmostSubform[0].Page1[0].f1_24[0]'] = formData.institutionStreet2;
-  }
-  if (formData.institutionCity) {
-    mappings['topmostSubform[0].Page1[0].f1_25[0]'] = formData.institutionCity;
-  }
-  if (formData.institutionState) {
-    mappings['topmostSubform[0].Page1[0].f1_26[0]'] = formData.institutionState;
-  }
-  if (formData.institutionZip) {
-    mappings['topmostSubform[0].Page1[0].f1_27[0]'] = formData.institutionZip;
-  }
-  if (formData.institutionPhone) {
-    mappings['topmostSubform[0].Page1[0].f1_28[0]'] = formData.institutionPhone;
+  // ========== VISA INFORMATION ==========
+  // f1_09: Visa and entry date (combined)
+  if (formData.visaStatus && formData.dateEnteredUS) {
+    const visaEntryDate = `${formData.visaStatus}, ${formatDateForPDF(formData.dateEnteredUS)}`;
+    mappings['topmostSubform[0].Page1[0].f1_09[0]'] = visaEntryDate;
   }
   
-  // DSO Information Section
-  if (formData.dsoName) {
-    mappings['topmostSubform[0].Page1[0].f1_29[0]'] = formData.dsoName;
-  }
-  if (formData.dsoEmail) {
-    mappings['topmostSubform[0].Page1[0].f1_30[0]'] = formData.dsoEmail;
-  }
-  if (formData.dsoPhone) {
-    mappings['topmostSubform[0].Page1[0].f1_31[0]'] = formData.dsoPhone;
+  // f1_10: Nonimmigrant status
+  if (formData.visaStatus) {
+    mappings['topmostSubform[0].Page1[0].f1_10[0]'] = formData.visaStatus;
   }
   
-  // Program Dates
-  if (formData.programStartDate) {
-    const formattedDate = formatDateForPDF(formData.programStartDate);
-    mappings['topmostSubform[0].Page1[0].f1_32[0]'] = formattedDate;
+  // ========== CITIZENSHIP ==========
+  // f1_11: Citizen tax year (countryOfCitizenship + otherCitizenships)
+  const citizenships = [formData.countryOfCitizenship];
+  if (formData.otherCitizenships && Array.isArray(formData.otherCitizenships)) {
+    const otherCitizenships = formData.otherCitizenships.filter(c => {
+      if (!c) return false;
+      if (typeof c === 'string') {
+        return c.trim() !== '';
+      }
+      return true; // Non-string values (shouldn't happen, but safe)
+    });
+    citizenships.push(...otherCitizenships);
   }
-  if (formData.programEndDate) {
-    const formattedDate = formatDateForPDF(formData.programEndDate);
-    mappings['topmostSubform[0].Page1[0].f1_33[0]'] = formattedDate;
+  const citizenTaxYear = citizenships.filter(Boolean).join(', ');
+  if (citizenTaxYear) {
+    mappings['topmostSubform[0].Page1[0].f1_11[0]'] = citizenTaxYear;
   }
   
-  // Additional field (f1_34) - may be for additional information or continuation
-  // Map to any additional relevant data
-  if (formData.additionalInfo) {
-    mappings['topmostSubform[0].Page1[0].f1_34[0]'] = formData.additionalInfo;
+  // ========== PASSPORT INFORMATION ==========
+  // f1_12: Passport countries
+  const passportCountries = combinePassportFields(formData.passports, 'country');
+  if (passportCountries) {
+    mappings['topmostSubform[0].Page1[0].f1_12[0]'] = passportCountries;
   }
   
-  // ========== PAGE 2 FIELDS ==========
+  // f1_13: Passport numbers
+  const passportNumbers = combinePassportFields(formData.passports, 'number');
+  if (passportNumbers) {
+    mappings['topmostSubform[0].Page1[0].f1_13[0]'] = passportNumbers;
+  }
   
-  // f2_01 to f2_08: Additional information fields (typically for Part II or continuation)
-  // These might be for additional presence information, treaty information, etc.
-  if (formData.part2Info1) {
-    mappings['topmostSubform[0].Page2[0].f2_01[0]'] = formData.part2Info1;
+  // ========== DAYS IN USA ==========
+  // f1_14: Number in USA 2025
+  if (formData.daysInUS2025 !== undefined && formData.daysInUS2025 !== null) {
+    mappings['topmostSubform[0].Page1[0].f1_14[0]'] = String(formData.daysInUS2025);
   }
-  if (formData.part2Info2) {
-    mappings['topmostSubform[0].Page2[0].f2_02[0]'] = formData.part2Info2;
+  
+  // f1_15: Number in USA 2024
+  if (formData.daysInUS2024 !== undefined && formData.daysInUS2024 !== null) {
+    mappings['topmostSubform[0].Page1[0].f1_15[0]'] = String(formData.daysInUS2024);
   }
-  if (formData.part2Info3) {
-    mappings['topmostSubform[0].Page2[0].f2_03[0]'] = formData.part2Info3;
+  
+  // f1_16: Number in USA 2023
+  if (formData.daysInUS2023 !== undefined && formData.daysInUS2023 !== null) {
+    mappings['topmostSubform[0].Page1[0].f1_16[0]'] = String(formData.daysInUS2023);
   }
-  if (formData.part2Info4) {
-    mappings['topmostSubform[0].Page2[0].f2_04[0]'] = formData.part2Info4;
+  
+  // f1_17: 2025 exclude presence (display daysInUS2025)
+  if (formData.daysInUS2025 !== undefined && formData.daysInUS2025 !== null) {
+    mappings['topmostSubform[0].Page1[0].f1_17[0]'] = String(formData.daysInUS2025);
   }
-  if (formData.part2Info5) {
-    mappings['topmostSubform[0].Page2[0].f2_05[0]'] = formData.part2Info5;
+  
+  // ========== INSTITUTION INFORMATION (COMBINED) ==========
+  // f1_26: Student school info
+  const schoolParts = [];
+  if (formData.institutionName) schoolParts.push(formData.institutionName);
+  if (formData.institutionStreet1) schoolParts.push(formData.institutionStreet1);
+  if (formData.institutionStreet2) schoolParts.push(formData.institutionStreet2);
+  const schoolCityStateZip = [formData.institutionCity, formData.institutionState, formData.institutionZip].filter(Boolean).join(' ');
+  if (schoolCityStateZip) schoolParts.push(schoolCityStateZip);
+  if (formData.institutionPhone) schoolParts.push(formData.institutionPhone);
+  const studentSchoolInfo = schoolParts.join(', ');
+  if (studentSchoolInfo) {
+    mappings['topmostSubform[0].Page1[0].f1_26[0]'] = studentSchoolInfo;
   }
-  if (formData.part2Info6) {
-    mappings['topmostSubform[0].Page2[0].f2_06[0]'] = formData.part2Info6;
+  
+  // f1_27: Student director info
+  const directorParts = [];
+  if (formData.dsoName) directorParts.push(formData.dsoName);
+  if (formData.dsoEmail) directorParts.push(formData.dsoEmail);
+  if (formData.dsoPhone) directorParts.push(formData.dsoPhone);
+  const studentDirectorInfo = directorParts.join(', ');
+  if (studentDirectorInfo) {
+    mappings['topmostSubform[0].Page1[0].f1_27[0]'] = studentDirectorInfo;
   }
-  if (formData.part2Info7) {
-    mappings['topmostSubform[0].Page2[0].f2_07[0]'] = formData.part2Info7;
+  
+  // ========== VISA HISTORY BY YEAR ==========
+  // f1_28 to f1_33: Visa held for each year (2019-2024)
+  if (formData.visaHistory && typeof formData.visaHistory === 'object') {
+    const yearMapping = {
+      '2019': 'topmostSubform[0].Page1[0].f1_28[0]',
+      '2020': 'topmostSubform[0].Page1[0].f1_29[0]',
+      '2021': 'topmostSubform[0].Page1[0].f1_30[0]',
+      '2022': 'topmostSubform[0].Page1[0].f1_31[0]',
+      '2023': 'topmostSubform[0].Page1[0].f1_32[0]',
+      '2024': 'topmostSubform[0].Page1[0].f1_33[0]'
+    };
+    
+    for (const [year, fieldName] of Object.entries(yearMapping)) {
+      if (formData.visaHistory[year]) {
+        mappings[fieldName] = formData.visaHistory[year];
+      }
+    }
   }
-  if (formData.part2Info8) {
-    mappings['topmostSubform[0].Page2[0].f2_08[0]'] = formData.part2Info8;
-  }
+  
+  // ========== APPLIED FOR PR EXPLANATION ==========
+  // f1_34: Explain applied for PR (auto-filled with empty string)
+  mappings['topmostSubform[0].Page1[0].f1_34[0]'] = '';
   
   return mappings;
 }
@@ -247,7 +254,6 @@ function getFieldMappings(formData) {
 /**
  * Fill checkboxes in the form
  * Form 8843 has 6 checkboxes: c1_1[0], c1_1[1], c1_2[0], c1_2[1], c1_3[0], c1_3[1]
- * These are typically for Yes/No questions or multiple choice options
  * @returns {number} Number of checkboxes successfully filled
  */
 function fillCheckboxes(form, formData) {
@@ -276,49 +282,54 @@ function fillCheckboxes(form, formData) {
       }
     }
     
-    // c1_2 checkboxes - typically for another Yes/No question
-    // c1_2[0] = Yes, c1_2[1] = No
-    if (formData.hasSSN === 'yes' || formData.hasSSN === true) {
+    // c1_2 checkboxes - Exempt 5 years check
+    // Logic: If dateEnteredUS is more than 5 years ago → Yes (c1_2[0])
+    //        If 5 years or less ago → No (c1_2[1])
+    if (formData.dateEnteredUS) {
+      const yearsSince = calculateYearsSince(formData.dateEnteredUS);
       try {
-        const checkbox = form.getCheckBox('topmostSubform[0].Page1[0].c1_2[0]');
-        checkbox.check();
-        filledCount++;
-        console.log('  ✓ Checked: c1_2[0] (Has SSN: Yes)');
+        const checkboxYes = form.getCheckBox('topmostSubform[0].Page1[0].c1_2[0]');
+        const checkboxNo = form.getCheckBox('topmostSubform[0].Page1[0].c1_2[1]');
+        
+        if (yearsSince > 5) {
+          checkboxYes.check();
+          try {
+            checkboxNo.uncheck();
+          } catch (e) {
+            // Ignore uncheck errors
+          }
+          filledCount++;
+          console.log(`  ✓ Checked: c1_2[0] (Exempt 5 years: Yes - entered ${yearsSince} years ago)`);
+        } else {
+          checkboxNo.check();
+          try {
+            checkboxYes.uncheck();
+          } catch (e) {
+            // Ignore uncheck errors
+          }
+          filledCount++;
+          console.log(`  ✓ Checked: c1_2[1] (Exempt 5 years: No - entered ${yearsSince} years ago)`);
+        }
       } catch (e) {
-        console.warn('  ⚠️  Could not check c1_2[0]:', e.message);
-      }
-    } else if (formData.hasSSN === 'no' || formData.hasSSN === false) {
-      try {
-        const checkbox = form.getCheckBox('topmostSubform[0].Page1[0].c1_2[1]');
-        checkbox.check();
-        filledCount++;
-        console.log('  ✓ Checked: c1_2[1] (Has SSN: No)');
-      } catch (e) {
-        console.warn('  ⚠️  Could not check c1_2[1]:', e.message);
+        console.warn('  ⚠️  Could not set c1_2 checkboxes:', e.message);
       }
     }
     
-    // c1_3 checkboxes - typically for another Yes/No question
-    // c1_3[0] = Yes, c1_3[1] = No
-    // This might be for treaty benefits, tax home, or other conditions
-    if (formData.treatyBenefits === 'yes' || formData.claimTreatyBenefits === true) {
+    // c1_3 checkboxes - Applied for PR
+    // Default: Check No (c1_3[1]), uncheck Yes (c1_3[0])
+    try {
+      const checkboxYes = form.getCheckBox('topmostSubform[0].Page1[0].c1_3[0]');
+      const checkboxNo = form.getCheckBox('topmostSubform[0].Page1[0].c1_3[1]');
+      checkboxNo.check();
       try {
-        const checkbox = form.getCheckBox('topmostSubform[0].Page1[0].c1_3[0]');
-        checkbox.check();
-        filledCount++;
-        console.log('  ✓ Checked: c1_3[0] (Treaty Benefits: Yes)');
+        checkboxYes.uncheck();
       } catch (e) {
-        console.warn('  ⚠️  Could not check c1_3[0]:', e.message);
+        // Ignore uncheck errors
       }
-    } else if (formData.treatyBenefits === 'no' || formData.claimTreatyBenefits === false) {
-      try {
-        const checkbox = form.getCheckBox('topmostSubform[0].Page1[0].c1_3[1]');
-        checkbox.check();
-        filledCount++;
-        console.log('  ✓ Checked: c1_3[1] (Treaty Benefits: No)');
-      } catch (e) {
-        console.warn('  ⚠️  Could not check c1_3[1]:', e.message);
-      }
+      filledCount++;
+      console.log('  ✓ Checked: c1_3[1] (Applied for PR: No - default)');
+    } catch (e) {
+      console.warn('  ⚠️  Could not set c1_3 checkboxes:', e.message);
     }
   } catch (e) {
     console.warn('  ⚠️  Error filling checkboxes:', e.message);
@@ -356,6 +367,60 @@ function formatDateForPDF(dateString) {
   } catch (e) {
     return dateString; // Return as-is if parsing fails
   }
+}
+
+/**
+ * Combine address fields into a single string
+ */
+function combineAddressFields(street1, street2, city, state, zip, country) {
+  const parts = [];
+  if (country) parts.push(country);
+  if (street1) parts.push(street1);
+  if (street2) parts.push(street2);
+  if (city) parts.push(city);
+  if (state) parts.push(state);
+  if (zip) parts.push(zip);
+  return parts.join(', ');
+}
+
+/**
+ * Combine passport arrays into comma-separated string
+ */
+function combinePassportFields(passports, field) {
+  if (!passports || !Array.isArray(passports)) return '';
+  const values = passports
+    .map(p => p && p[field])
+    .filter(Boolean);
+  return values.join(', ');
+}
+
+/**
+ * Calculate years since a given date
+ */
+function calculateYearsSince(dateString) {
+  if (!dateString) return 0;
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 0;
+    const today = new Date();
+    const years = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      return years - 1;
+    }
+    return years;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/**
+ * Calculate exclude presence (365 - daysInUS2025, ensure non-negative)
+ */
+function calculateExcludePresence(daysInUS2025) {
+  const days = parseInt(daysInUS2025) || 0;
+  const exclude = 365 - days;
+  return Math.max(0, exclude);
 }
 
 /**
