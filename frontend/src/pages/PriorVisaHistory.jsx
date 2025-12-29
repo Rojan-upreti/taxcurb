@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
@@ -7,14 +7,41 @@ import FilingProgress from '../components/FilingProgress'
 
 function PriorVisaHistory() {
   const navigate = useNavigate()
+  const location = useLocation()
   
   const [hasChangedStatus, setHasChangedStatus] = useState(null)
   const [visaHistory, setVisaHistory] = useState({})
   const [yearsToShow, setYearsToShow] = useState([])
   const [entryYear, setEntryYear] = useState(null)
+  const hasLoadedFromCache = useRef(false)
 
-  // Load visa status data to determine entry date
+  // Save function to ensure data is saved
+  const saveToCache = () => {
+    const data = {
+      hasChangedStatus,
+      visaHistory
+    }
+    localStorage.setItem('filing_prior_visa_history', JSON.stringify(data))
+  }
+
+  // Load cached data and visa status data to determine entry date
   useEffect(() => {
+    hasLoadedFromCache.current = false
+    // Load cached prior visa history data
+    try {
+      const cached = localStorage.getItem('filing_prior_visa_history')
+      if (cached) {
+        const data = JSON.parse(cached)
+        setHasChangedStatus(data.hasChangedStatus ?? null)
+        if (data.visaHistory) {
+          setVisaHistory(data.visaHistory)
+        }
+      }
+    } catch (e) {
+      console.error('Error loading cached prior visa history data:', e)
+    }
+
+    // Load visa status data to determine entry date
     const savedVisaData = localStorage.getItem('filing_visa_status')
     if (savedVisaData) {
       try {
@@ -36,12 +63,14 @@ function PriorVisaHistory() {
           
           setYearsToShow(years)
           
-          // Initialize visa history state for these years
-          const initialHistory = {}
-          years.forEach(year => {
-            initialHistory[year] = ''
-          })
-          setVisaHistory(initialHistory)
+          // Initialize visa history state for these years only if not already loaded from cache
+          if (!localStorage.getItem('filing_prior_visa_history')) {
+            const initialHistory = {}
+            years.forEach(year => {
+              initialHistory[year] = ''
+            })
+            setVisaHistory(initialHistory)
+          }
         }
       } catch (e) {
         console.error('Error parsing visa data:', e)
@@ -49,24 +78,38 @@ function PriorVisaHistory() {
         const defaultYears = ['2019', '2020', '2021', '2022', '2023', '2024', '2025']
         setYearsToShow(defaultYears)
         setEntryYear(2019)
-        const initialHistory = {}
-        defaultYears.forEach(year => {
-          initialHistory[year] = ''
-        })
-        setVisaHistory(initialHistory)
+        if (!localStorage.getItem('filing_prior_visa_history')) {
+          const initialHistory = {}
+          defaultYears.forEach(year => {
+            initialHistory[year] = ''
+          })
+          setVisaHistory(initialHistory)
+        }
       }
     } else {
       // Default to 2019-2025 if no visa data
       const defaultYears = ['2019', '2020', '2021', '2022', '2023', '2024', '2025']
       setYearsToShow(defaultYears)
       setEntryYear(2019)
-      const initialHistory = {}
-      defaultYears.forEach(year => {
-        initialHistory[year] = ''
-      })
-      setVisaHistory(initialHistory)
+      if (!localStorage.getItem('filing_prior_visa_history')) {
+        const initialHistory = {}
+        defaultYears.forEach(year => {
+          initialHistory[year] = ''
+        })
+        setVisaHistory(initialHistory)
+      }
     }
-  }, [])
+    
+    setTimeout(() => {
+      hasLoadedFromCache.current = true
+    }, 0)
+  }, [location.pathname])
+
+  // Save to cache whenever form data changes (but not before loading from cache)
+  useEffect(() => {
+    if (!hasLoadedFromCache.current) return
+    saveToCache()
+  }, [hasChangedStatus, visaHistory])
 
   // Auto-fill F-1 if user hasn't changed status
   useEffect(() => {
@@ -94,11 +137,7 @@ function PriorVisaHistory() {
 
   const handleContinue = () => {
     if (allFieldsCompleted) {
-      const data = {
-        hasChangedStatus,
-        visaHistory
-      }
-      localStorage.setItem('filing_prior_visa_history', JSON.stringify(data))
+      saveToCache() // Ensure data is saved before navigation
       navigate('/filing/address')
     }
   }
@@ -142,7 +181,13 @@ function PriorVisaHistory() {
                 <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
                   Have you ever changed your visa status?
                 </h2>
-                <YesNoButtons value={hasChangedStatus} onChange={setHasChangedStatus} />
+                <YesNoButtons 
+                  value={hasChangedStatus} 
+                  onChange={(value) => {
+                    setHasChangedStatus(value)
+                    setTimeout(saveToCache, 100)
+                  }} 
+                />
                 {hasChangedStatus === 'no' && (
                   <p className="text-xs text-slate-600 mt-3">
                     All years from your entry date onwards will be set to F-1.
@@ -165,7 +210,11 @@ function PriorVisaHistory() {
                         </label>
                         <select
                           value={visaHistory[year] || ''}
-                          onChange={(e) => handleVisaTypeChange(year, e.target.value)}
+                          onChange={(e) => {
+                            handleVisaTypeChange(year, e.target.value)
+                            setTimeout(saveToCache, 100)
+                          }}
+                          onBlur={saveToCache}
                           className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                         >
                           <option value="">Select visa type</option>

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
@@ -7,8 +7,10 @@ import FilingProgress from '../components/FilingProgress'
 
 function Income() {
   const navigate = useNavigate()
+  const location = useLocation()
   
   const [hasIncome, setHasIncome] = useState(null)
+  const hasLoadedFromCache = useRef(false)
 
   // Load visa status data from localStorage (or context in future)
   const [visaData, setVisaData] = useState(null)
@@ -62,14 +64,45 @@ function Income() {
 
 
 
-  const handleContinue = () => {
-    if (hasIncome === 'no') {
-      // Save income data
+  // Save function to ensure data is saved
+  const saveToCache = () => {
+    if (hasIncome !== null) {
       const incomeData = {
         hasIncome
       }
       localStorage.setItem('filing_income', JSON.stringify(incomeData))
-      // Navigate to identity & travel document page
+    }
+  }
+
+  // Load cached data on mount and whenever location changes (navigation)
+  useEffect(() => {
+    hasLoadedFromCache.current = false
+    try {
+      const cached = localStorage.getItem('filing_income')
+      if (cached) {
+        const data = JSON.parse(cached)
+        setHasIncome(data.hasIncome ?? null)
+      }
+      setTimeout(() => {
+        hasLoadedFromCache.current = true
+      }, 0)
+    } catch (e) {
+      console.error('Error loading cached income data:', e)
+      setTimeout(() => {
+        hasLoadedFromCache.current = true
+      }, 0)
+    }
+  }, [location.pathname])
+
+  // Save to cache whenever form data changes (but not before loading from cache)
+  useEffect(() => {
+    if (!hasLoadedFromCache.current) return
+    saveToCache()
+  }, [hasIncome])
+
+  const handleContinue = () => {
+    if (hasIncome === 'no') {
+      saveToCache() // Ensure data is saved before navigation
       navigate('/filing/identity&Traveldocument')
     }
   }
@@ -133,13 +166,25 @@ function Income() {
                       <li>Any U.S. paid work</li>
                     </ul>
                   </div>
-                  <YesNoButtons value={hasIncome} onChange={setHasIncome} />
+                  <YesNoButtons 
+                    value={hasIncome} 
+                    onChange={(value) => {
+                      setHasIncome(value)
+                      setTimeout(saveToCache, 100)
+                    }} 
+                  />
                 </QuestionCard>
               )}
 
-              {/* No Income Path - Just show continue button */}
+              {/* No Income Path - Show continue button with back button */}
               {hasIncome === 'no' && (!visaData || wasInUSAIn2025()) && (
-                <div className="flex justify-center pt-2">
+                <div className="flex justify-between gap-3 pt-2">
+                  <button
+                    onClick={() => navigate('/filing/visa_status')}
+                    className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+                  >
+                    ← Back
+                  </button>
                   <button
                     onClick={handleContinue}
                     className="px-6 py-2 bg-ink text-white text-xs font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
@@ -158,8 +203,8 @@ function Income() {
                 </QuestionCard>
               )}
 
-              {/* Navigation Buttons */}
-              {hasIncome !== 'no' && (
+              {/* Navigation Buttons - Show when income is null or yes */}
+              {(hasIncome === null || hasIncome === 'yes') && (
                 <div className="flex justify-between gap-3 pt-2">
                   <button
                     onClick={() => navigate('/filing/visa_status')}

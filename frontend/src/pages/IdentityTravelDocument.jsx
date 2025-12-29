@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
@@ -7,15 +7,49 @@ import FilingProgress from '../components/FilingProgress'
 
 function IdentityTravelDocument() {
   const navigate = useNavigate()
+  const location = useLocation()
   
   const [hasSSN, setHasSSN] = useState(null)
   const [ssn, setSSN] = useState('')
   const [passports, setPassports] = useState([{ country: '', number: '' }])
   const [hasMultiplePassports, setHasMultiplePassports] = useState(null)
   const [allCitizenships, setAllCitizenships] = useState([])
+  const hasLoadedFromCache = useRef(false)
 
-  // Load profile data to get all citizenships
+  // Save function to ensure data is saved
+  const saveToCache = () => {
+    const data = {
+      hasSSN,
+      ssn: hasSSN === 'yes' ? ssn : '',
+      passports: passports.length > 0 ? passports : [{ country: '', number: '' }], // Always save full array
+      hasMultiplePassports
+    }
+    localStorage.setItem('filing_identity_travel', JSON.stringify(data))
+  }
+
+  // Load profile data to get all citizenships and cached identity data
   useEffect(() => {
+    hasLoadedFromCache.current = false
+    let hasCachedPassports = false
+    
+    // Load cached identity data first
+    try {
+      const cached = localStorage.getItem('filing_identity_travel')
+      if (cached) {
+        const data = JSON.parse(cached)
+        setHasSSN(data.hasSSN ?? null)
+        setSSN(data.ssn || '')
+        setHasMultiplePassports(data.hasMultiplePassports ?? null)
+        if (data.passports && data.passports.length > 0) {
+          setPassports(data.passports)
+          hasCachedPassports = true
+        }
+      }
+    } catch (e) {
+      console.error('Error loading cached identity data:', e)
+    }
+
+    // Load profile data to get all citizenships
     const savedProfile = localStorage.getItem('filing_profile')
     if (savedProfile) {
       try {
@@ -26,15 +60,25 @@ function IdentityTravelDocument() {
         }
         setAllCitizenships(citizenships.filter(c => c))
         
-        // Set first passport country to first citizenship by default
-        if (profile.countryOfCitizenship) {
+        // Set first passport country to first citizenship by default if not already loaded from cache
+        if (profile.countryOfCitizenship && !hasCachedPassports) {
           setPassports([{ country: profile.countryOfCitizenship, number: '' }])
         }
       } catch (e) {
         console.error('Error parsing profile data:', e)
       }
     }
-  }, [])
+    
+    setTimeout(() => {
+      hasLoadedFromCache.current = true
+    }, 0)
+  }, [location.pathname])
+
+  // Save to cache whenever form data changes (but not before loading from cache)
+  useEffect(() => {
+    if (!hasLoadedFromCache.current) return
+    saveToCache()
+  }, [hasSSN, ssn, passports, hasMultiplePassports])
 
   const handleSSNChange = (value) => {
     // Format SSN as XXX-XX-XXXX
@@ -59,6 +103,7 @@ function IdentityTravelDocument() {
 
   const handleAddPassport = () => {
     setPassports([...passports, { country: '', number: '' }])
+    setTimeout(saveToCache, 100)
   }
 
   const handleRemovePassport = (index) => {
@@ -69,16 +114,13 @@ function IdentityTravelDocument() {
 
   const handleContinue = () => {
     if (allFieldsCompleted) {
-      const data = {
-        hasSSN,
-        ssn: hasSSN === 'yes' ? ssn : '',
-        passports: passports.filter(p => p.country && p.number),
-        hasMultiplePassports
-      }
-      localStorage.setItem('filing_identity_travel', JSON.stringify(data))
+      saveToCache() // Ensure data is saved before navigation
       navigate('/filing/program&USpresence')
     }
   }
+
+  // Check if any passport country is United States
+  const hasUSPassport = passports.some(p => p.country === 'United States')
 
   const allFieldsCompleted = 
     hasSSN !== null &&
@@ -86,7 +128,8 @@ function IdentityTravelDocument() {
     hasMultiplePassports !== null &&
     passports[0].country !== '' &&
     passports[0].number !== '' &&
-    (hasMultiplePassports === 'no' || (hasMultiplePassports === 'yes' && passports.slice(1).every(p => p.country !== '' && p.number !== '')))
+    !hasUSPassport &&
+    (hasMultiplePassports === 'no' || (hasMultiplePassports === 'yes' && passports.slice(1).every(p => p.country !== '' && p.number !== '' && p.country !== 'United States')))
 
   const completedPages = allFieldsCompleted 
     ? ['profile', 'residency', 'visa_status', 'income', 'identity_travel']
@@ -94,14 +137,200 @@ function IdentityTravelDocument() {
 
   // List of countries
   const countries = [
-    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Bangladesh',
-    'Belgium', 'Brazil', 'Bulgaria', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia',
-    'Czech Republic', 'Denmark', 'Egypt', 'Finland', 'France', 'Germany', 'Greece', 'Hungary',
-    'India', 'Indonesia', 'Iran', 'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya', 'Malaysia',
-    'Mexico', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway', 'Pakistan', 'Philippines',
-    'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia', 'Singapore', 'South Africa',
-    'South Korea', 'Spain', 'Sweden', 'Switzerland', 'Taiwan', 'Thailand', 'Turkey',
-    'Ukraine', 'United Kingdom', 'United States', 'Venezuela', 'Vietnam', 'Other'
+    'Afghanistan',
+    'Albania',
+    'Algeria',
+    'Andorra',
+    'Angola',
+    'Antigua and Barbuda',
+    'Argentina',
+    'Armenia',
+    'Australia',
+    'Austria',
+    'Azerbaijan',
+    'Bahamas',
+    'Bahrain',
+    'Bangladesh',
+    'Barbados',
+    'Belarus',
+    'Belgium',
+    'Belize',
+    'Benin',
+    'Bhutan',
+    'Bolivia',
+    'Bosnia and Herzegovina',
+    'Botswana',
+    'Brazil',
+    'Brunei',
+    'Bulgaria',
+    'Burkina Faso',
+    'Burundi',
+    'Cambodia',
+    'Cameroon',
+    'Canada',
+    'Cape Verde',
+    'Central African Republic',
+    'Chad',
+    'Chile',
+    'China',
+    'Colombia',
+    'Comoros',
+    'Congo',
+    'Costa Rica',
+    'Croatia',
+    'Cuba',
+    'Cyprus',
+    'Czech Republic',
+    'Denmark',
+    'Djibouti',
+    'Dominica',
+    'Dominican Republic',
+    'Ecuador',
+    'Egypt',
+    'El Salvador',
+    'Equatorial Guinea',
+    'Eritrea',
+    'Estonia',
+    'Eswatini',
+    'Ethiopia',
+    'Fiji',
+    'Finland',
+    'France',
+    'Gabon',
+    'Gambia',
+    'Georgia',
+    'Germany',
+    'Ghana',
+    'Greece',
+    'Grenada',
+    'Guatemala',
+    'Guinea',
+    'Guinea-Bissau',
+    'Guyana',
+    'Haiti',
+    'Honduras',
+    'Hungary',
+    'Iceland',
+    'India',
+    'Indonesia',
+    'Iran',
+    'Iraq',
+    'Ireland',
+    'Israel',
+    'Italy',
+    'Jamaica',
+    'Japan',
+    'Jordan',
+    'Kazakhstan',
+    'Kenya',
+    'Kiribati',
+    'Kuwait',
+    'Kyrgyzstan',
+    'Laos',
+    'Latvia',
+    'Lebanon',
+    'Lesotho',
+    'Liberia',
+    'Libya',
+    'Liechtenstein',
+    'Lithuania',
+    'Luxembourg',
+    'Madagascar',
+    'Malawi',
+    'Malaysia',
+    'Maldives',
+    'Mali',
+    'Malta',
+    'Marshall Islands',
+    'Mauritania',
+    'Mauritius',
+    'Mexico',
+    'Micronesia',
+    'Moldova',
+    'Monaco',
+    'Mongolia',
+    'Montenegro',
+    'Morocco',
+    'Mozambique',
+    'Myanmar',
+    'Namibia',
+    'Nauru',
+    'Nepal',
+    'Netherlands',
+    'New Zealand',
+    'Nicaragua',
+    'Niger',
+    'Nigeria',
+    'North Korea',
+    'North Macedonia',
+    'Norway',
+    'Oman',
+    'Pakistan',
+    'Palau',
+    'Panama',
+    'Papua New Guinea',
+    'Paraguay',
+    'Peru',
+    'Philippines',
+    'Poland',
+    'Portugal',
+    'Qatar',
+    'Romania',
+    'Russia',
+    'Rwanda',
+    'Saint Kitts and Nevis',
+    'Saint Lucia',
+    'Saint Vincent and the Grenadines',
+    'Samoa',
+    'San Marino',
+    'Sao Tome and Principe',
+    'Saudi Arabia',
+    'Senegal',
+    'Serbia',
+    'Seychelles',
+    'Sierra Leone',
+    'Singapore',
+    'Slovakia',
+    'Slovenia',
+    'Solomon Islands',
+    'Somalia',
+    'South Africa',
+    'South Korea',
+    'South Sudan',
+    'Spain',
+    'Sri Lanka',
+    'Sudan',
+    'Suriname',
+    'Sweden',
+    'Switzerland',
+    'Syria',
+    'Taiwan',
+    'Tajikistan',
+    'Tanzania',
+    'Thailand',
+    'Timor-Leste',
+    'Togo',
+    'Tonga',
+    'Trinidad and Tobago',
+    'Tunisia',
+    'Turkey',
+    'Turkmenistan',
+    'Tuvalu',
+    'Uganda',
+    'Ukraine',
+    'United Arab Emirates',
+    'United Kingdom',
+    'United States',
+    'Uruguay',
+    'Uzbekistan',
+    'Vanuatu',
+    'Vatican City',
+    'Venezuela',
+    'Vietnam',
+    'Yemen',
+    'Zambia',
+    'Zimbabwe',
+    'Other'
   ]
 
   return (
@@ -126,7 +355,13 @@ function IdentityTravelDocument() {
                 <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
                   Do you have SSN?
                 </h2>
-                <YesNoButtons value={hasSSN} onChange={setHasSSN} />
+                <YesNoButtons 
+                  value={hasSSN} 
+                  onChange={(value) => {
+                    setHasSSN(value)
+                    setTimeout(saveToCache, 100)
+                  }} 
+                />
               </QuestionCard>
 
               {/* SSN Input */}
@@ -139,6 +374,7 @@ function IdentityTravelDocument() {
                     type="text"
                     value={ssn}
                     onChange={(e) => handleSSNChange(e.target.value)}
+                    onBlur={saveToCache}
                     placeholder="XXX-XX-XXXX"
                     maxLength={11}
                     className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
@@ -160,7 +396,11 @@ function IdentityTravelDocument() {
                     </label>
                     <select
                       value={passports[0].country}
-                      onChange={(e) => handlePassportChange(0, 'country', e.target.value)}
+                      onChange={(e) => {
+                        handlePassportChange(0, 'country', e.target.value)
+                        setTimeout(saveToCache, 100)
+                      }}
+                      onBlur={saveToCache}
                       className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                     >
                       <option value="">Select country</option>
@@ -170,6 +410,21 @@ function IdentityTravelDocument() {
                         </option>
                       ))}
                     </select>
+                    {passports[0].country === 'United States' && (
+                      <div className="mt-3 bg-stone-100 border border-slate-300 p-4 text-center rounded-3xl">
+                        <div className="flex justify-center mb-2">
+                          <svg className="w-8 h-8 text-ink" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <p className="text-sm font-semibold text-ink">
+                          This is for Specifically F1 Non Resident alien only
+                        </p>
+                        <p className="text-xs text-slate-700 mt-1">
+                          U.S. citizens are not eligible for this service.
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-ink mb-2">
@@ -178,7 +433,11 @@ function IdentityTravelDocument() {
                     <input
                       type="text"
                       value={passports[0].number}
-                      onChange={(e) => handlePassportChange(0, 'number', e.target.value)}
+                      onChange={(e) => {
+                        handlePassportChange(0, 'number', e.target.value)
+                        setTimeout(saveToCache, 100)
+                      }}
+                      onBlur={saveToCache}
                       className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                       placeholder="Enter passport number"
                     />
@@ -191,7 +450,13 @@ function IdentityTravelDocument() {
                 <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
                   Do you hold multiple passports?
                 </h2>
-                <YesNoButtons value={hasMultiplePassports} onChange={setHasMultiplePassports} />
+                <YesNoButtons 
+                  value={hasMultiplePassports} 
+                  onChange={(value) => {
+                    setHasMultiplePassports(value)
+                    setTimeout(saveToCache, 100)
+                  }} 
+                />
               </QuestionCard>
 
               {/* Additional Passports */}
@@ -216,7 +481,11 @@ function IdentityTravelDocument() {
                           </label>
                           <select
                             value={passport.country}
-                            onChange={(e) => handlePassportChange(index + 1, 'country', e.target.value)}
+                            onChange={(e) => {
+                              handlePassportChange(index + 1, 'country', e.target.value)
+                              setTimeout(saveToCache, 100)
+                            }}
+                            onBlur={saveToCache}
                             className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                           >
                             <option value="">Select country</option>
@@ -228,6 +497,16 @@ function IdentityTravelDocument() {
                                 </option>
                               ))}
                           </select>
+                          {passport.country === 'United States' && (
+                            <div className="mt-3 bg-stone-100 border border-slate-300 p-3 text-center rounded-2xl">
+                              <p className="text-xs font-semibold text-ink">
+                                This is for Specifically F1 Non Resident alien only
+                              </p>
+                              <p className="text-xs text-slate-700 mt-1">
+                                U.S. citizens are not eligible for this service.
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-ink mb-2">
@@ -236,7 +515,11 @@ function IdentityTravelDocument() {
                           <input
                             type="text"
                             value={passport.number}
-                            onChange={(e) => handlePassportChange(index + 1, 'number', e.target.value)}
+                            onChange={(e) => {
+                              handlePassportChange(index + 1, 'number', e.target.value)
+                              setTimeout(saveToCache, 100)
+                            }}
+                            onBlur={saveToCache}
                             className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                             placeholder="Enter passport number"
                           />

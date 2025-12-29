@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
@@ -7,6 +7,7 @@ import { validateZIP, formatZIP } from '../utils/validation'
 
 function Address() {
   const navigate = useNavigate()
+  const location = useLocation()
   
   // Country of Residence Address
   const [countryOfResidence, setCountryOfResidence] = useState('')
@@ -22,27 +23,73 @@ function Address() {
   const [usCity, setUsCity] = useState('')
   const [usState, setUsState] = useState('')
   const [usZip, setUsZip] = useState('')
+  const hasLoadedFromCache = useRef(false)
+
+  // Save function to ensure data is saved
+  const saveToCache = () => {
+    const data = {
+      countryOfResidence: {
+        country: countryOfResidence,
+        street1: residenceStreet1,
+        street2: residenceStreet2,
+        city: residenceCity,
+        state: residenceState,
+        zip: residenceZip
+      },
+      unitedStates: {
+        street1: usStreet1,
+        street2: usStreet2,
+        city: usCity,
+        state: usState,
+        zip: usZip
+      }
+    }
+    localStorage.setItem('filing_address', JSON.stringify(data))
+  }
+
+  // Load cached data on mount
+  useEffect(() => {
+    hasLoadedFromCache.current = false
+    try {
+      const cached = localStorage.getItem('filing_address')
+      if (cached) {
+        const data = JSON.parse(cached)
+        if (data.countryOfResidence) {
+          setCountryOfResidence(data.countryOfResidence.country || '')
+          setResidenceStreet1(data.countryOfResidence.street1 || '')
+          setResidenceStreet2(data.countryOfResidence.street2 || '')
+          setResidenceCity(data.countryOfResidence.city || '')
+          setResidenceState(data.countryOfResidence.state || '')
+          setResidenceZip(data.countryOfResidence.zip || '')
+        }
+        if (data.unitedStates) {
+          setUsStreet1(data.unitedStates.street1 || '')
+          setUsStreet2(data.unitedStates.street2 || '')
+          setUsCity(data.unitedStates.city || '')
+          setUsState(data.unitedStates.state || '')
+          setUsZip(data.unitedStates.zip || '')
+        }
+      }
+      setTimeout(() => {
+        hasLoadedFromCache.current = true
+      }, 0)
+    } catch (e) {
+      console.error('Error loading cached address data:', e)
+      setTimeout(() => {
+        hasLoadedFromCache.current = true
+      }, 0)
+    }
+  }, [location.pathname])
+
+  // Save to cache whenever form data changes (but not before loading from cache)
+  useEffect(() => {
+    if (!hasLoadedFromCache.current) return
+    saveToCache()
+  }, [countryOfResidence, residenceStreet1, residenceStreet2, residenceCity, residenceState, residenceZip, usStreet1, usStreet2, usCity, usState, usZip])
 
   const handleContinue = () => {
     if (allFieldsCompleted) {
-      const data = {
-        countryOfResidence: {
-          country: countryOfResidence,
-          street1: residenceStreet1,
-          street2: residenceStreet2,
-          city: residenceCity,
-          state: residenceState,
-          zip: residenceZip
-        },
-        unitedStates: {
-          street1: usStreet1,
-          street2: usStreet2,
-          city: usCity,
-          state: usState,
-          zip: usZip
-        }
-      }
-      localStorage.setItem('filing_address', JSON.stringify(data))
+      saveToCache() // Ensure data is saved before navigation
       // Navigate to completion or summary page
       // navigate('/filing/summary')
     }
@@ -63,14 +110,200 @@ function Address() {
 
   // List of countries
   const countries = [
-    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Bangladesh',
-    'Belgium', 'Brazil', 'Bulgaria', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia',
-    'Czech Republic', 'Denmark', 'Egypt', 'Finland', 'France', 'Germany', 'Greece', 'Hungary',
-    'India', 'Indonesia', 'Iran', 'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya', 'Malaysia',
-    'Mexico', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway', 'Pakistan', 'Philippines',
-    'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia', 'Singapore', 'South Africa',
-    'South Korea', 'Spain', 'Sweden', 'Switzerland', 'Taiwan', 'Thailand', 'Turkey',
-    'Ukraine', 'United Kingdom', 'United States', 'Venezuela', 'Vietnam', 'Other'
+    'Afghanistan',
+    'Albania',
+    'Algeria',
+    'Andorra',
+    'Angola',
+    'Antigua and Barbuda',
+    'Argentina',
+    'Armenia',
+    'Australia',
+    'Austria',
+    'Azerbaijan',
+    'Bahamas',
+    'Bahrain',
+    'Bangladesh',
+    'Barbados',
+    'Belarus',
+    'Belgium',
+    'Belize',
+    'Benin',
+    'Bhutan',
+    'Bolivia',
+    'Bosnia and Herzegovina',
+    'Botswana',
+    'Brazil',
+    'Brunei',
+    'Bulgaria',
+    'Burkina Faso',
+    'Burundi',
+    'Cambodia',
+    'Cameroon',
+    'Canada',
+    'Cape Verde',
+    'Central African Republic',
+    'Chad',
+    'Chile',
+    'China',
+    'Colombia',
+    'Comoros',
+    'Congo',
+    'Costa Rica',
+    'Croatia',
+    'Cuba',
+    'Cyprus',
+    'Czech Republic',
+    'Denmark',
+    'Djibouti',
+    'Dominica',
+    'Dominican Republic',
+    'Ecuador',
+    'Egypt',
+    'El Salvador',
+    'Equatorial Guinea',
+    'Eritrea',
+    'Estonia',
+    'Eswatini',
+    'Ethiopia',
+    'Fiji',
+    'Finland',
+    'France',
+    'Gabon',
+    'Gambia',
+    'Georgia',
+    'Germany',
+    'Ghana',
+    'Greece',
+    'Grenada',
+    'Guatemala',
+    'Guinea',
+    'Guinea-Bissau',
+    'Guyana',
+    'Haiti',
+    'Honduras',
+    'Hungary',
+    'Iceland',
+    'India',
+    'Indonesia',
+    'Iran',
+    'Iraq',
+    'Ireland',
+    'Israel',
+    'Italy',
+    'Jamaica',
+    'Japan',
+    'Jordan',
+    'Kazakhstan',
+    'Kenya',
+    'Kiribati',
+    'Kuwait',
+    'Kyrgyzstan',
+    'Laos',
+    'Latvia',
+    'Lebanon',
+    'Lesotho',
+    'Liberia',
+    'Libya',
+    'Liechtenstein',
+    'Lithuania',
+    'Luxembourg',
+    'Madagascar',
+    'Malawi',
+    'Malaysia',
+    'Maldives',
+    'Mali',
+    'Malta',
+    'Marshall Islands',
+    'Mauritania',
+    'Mauritius',
+    'Mexico',
+    'Micronesia',
+    'Moldova',
+    'Monaco',
+    'Mongolia',
+    'Montenegro',
+    'Morocco',
+    'Mozambique',
+    'Myanmar',
+    'Namibia',
+    'Nauru',
+    'Nepal',
+    'Netherlands',
+    'New Zealand',
+    'Nicaragua',
+    'Niger',
+    'Nigeria',
+    'North Korea',
+    'North Macedonia',
+    'Norway',
+    'Oman',
+    'Pakistan',
+    'Palau',
+    'Panama',
+    'Papua New Guinea',
+    'Paraguay',
+    'Peru',
+    'Philippines',
+    'Poland',
+    'Portugal',
+    'Qatar',
+    'Romania',
+    'Russia',
+    'Rwanda',
+    'Saint Kitts and Nevis',
+    'Saint Lucia',
+    'Saint Vincent and the Grenadines',
+    'Samoa',
+    'San Marino',
+    'Sao Tome and Principe',
+    'Saudi Arabia',
+    'Senegal',
+    'Serbia',
+    'Seychelles',
+    'Sierra Leone',
+    'Singapore',
+    'Slovakia',
+    'Slovenia',
+    'Solomon Islands',
+    'Somalia',
+    'South Africa',
+    'South Korea',
+    'South Sudan',
+    'Spain',
+    'Sri Lanka',
+    'Sudan',
+    'Suriname',
+    'Sweden',
+    'Switzerland',
+    'Syria',
+    'Taiwan',
+    'Tajikistan',
+    'Tanzania',
+    'Thailand',
+    'Timor-Leste',
+    'Togo',
+    'Tonga',
+    'Trinidad and Tobago',
+    'Tunisia',
+    'Turkey',
+    'Turkmenistan',
+    'Tuvalu',
+    'Uganda',
+    'Ukraine',
+    'United Arab Emirates',
+    'United Kingdom',
+    'United States',
+    'Uruguay',
+    'Uzbekistan',
+    'Vanuatu',
+    'Vatican City',
+    'Venezuela',
+    'Vietnam',
+    'Yemen',
+    'Zambia',
+    'Zimbabwe',
+    'Other'
   ]
 
   // US States list
@@ -113,6 +346,7 @@ function Address() {
                     <select
                       value={countryOfResidence}
                       onChange={(e) => setCountryOfResidence(e.target.value)}
+                      onBlur={saveToCache}
                       className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                     >
                       <option value="">Select country</option>
@@ -133,6 +367,7 @@ function Address() {
                       type="text"
                       value={residenceStreet1}
                       onChange={(e) => setResidenceStreet1(e.target.value)}
+                      onBlur={saveToCache}
                       className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                       placeholder="Enter street address"
                     />
@@ -147,6 +382,7 @@ function Address() {
                       type="text"
                       value={residenceStreet2}
                       onChange={(e) => setResidenceStreet2(e.target.value)}
+                      onBlur={saveToCache}
                       className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                       placeholder="Apartment, suite, etc. (optional)"
                     />
@@ -162,6 +398,7 @@ function Address() {
                         type="text"
                         value={residenceCity}
                         onChange={(e) => setResidenceCity(e.target.value)}
+                        onBlur={saveToCache}
                         className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                         placeholder="Enter city"
                       />
@@ -175,6 +412,7 @@ function Address() {
                           type="text"
                           value={residenceState}
                           onChange={(e) => setResidenceState(e.target.value)}
+                          onBlur={saveToCache}
                           className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                           placeholder="State/Province"
                         />
@@ -187,6 +425,7 @@ function Address() {
                           type="text"
                           value={residenceZip}
                           onChange={(e) => setResidenceZip(formatZIP(e.target.value))}
+                          onBlur={saveToCache}
                           className={`w-full px-3 py-1.5 text-xs border-2 rounded-full font-medium focus:outline-none ${
                             residenceZip && !validateZIP(residenceZip)
                               ? 'border-red-500 bg-red-50'
@@ -231,6 +470,7 @@ function Address() {
                       type="text"
                       value={usStreet1}
                       onChange={(e) => setUsStreet1(e.target.value)}
+                      onBlur={saveToCache}
                       className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                       placeholder="Enter street address"
                     />
@@ -245,6 +485,7 @@ function Address() {
                       type="text"
                       value={usStreet2}
                       onChange={(e) => setUsStreet2(e.target.value)}
+                      onBlur={saveToCache}
                       className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                       placeholder="Apartment, suite, etc. (optional)"
                     />
@@ -260,6 +501,7 @@ function Address() {
                         type="text"
                         value={usCity}
                         onChange={(e) => setUsCity(e.target.value)}
+                        onBlur={saveToCache}
                         className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                         placeholder="Enter city"
                       />
@@ -272,6 +514,7 @@ function Address() {
                         <select
                           value={usState}
                           onChange={(e) => setUsState(e.target.value)}
+                          onBlur={saveToCache}
                           className="w-full px-3 py-1.5 text-xs border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
                         >
                           <option value="">Select state</option>
@@ -290,6 +533,7 @@ function Address() {
                           type="text"
                           value={usZip}
                           onChange={(e) => setUsZip(formatZIP(e.target.value))}
+                          onBlur={saveToCache}
                           className={`w-full px-3 py-1.5 text-xs border-2 rounded-full font-medium focus:outline-none ${
                             usZip && !validateZIP(usZip)
                               ? 'border-red-500 bg-red-50'

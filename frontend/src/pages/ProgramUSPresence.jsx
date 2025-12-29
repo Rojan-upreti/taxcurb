@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
@@ -7,8 +7,11 @@ import { validateEmail, validatePhone, validateZIP, formatPhone, formatZIP } fro
 
 function ProgramUSPresence() {
   const navigate = useNavigate()
+  const location = useLocation()
   
-  const [daysInUS, setDaysInUS] = useState('')
+  const [daysInUS2023, setDaysInUS2023] = useState('')
+  const [daysInUS2024, setDaysInUS2024] = useState('')
+  const [daysInUS2025, setDaysInUS2025] = useState('')
   const [institutionName, setInstitutionName] = useState('')
   const [institutionStreet1, setInstitutionStreet1] = useState('')
   const [institutionStreet2, setInstitutionStreet2] = useState('')
@@ -19,90 +22,184 @@ function ProgramUSPresence() {
   const [dsoName, setDsoName] = useState('')
   const [dsoEmail, setDsoEmail] = useState('')
   const [dsoPhone, setDsoPhone] = useState('')
+  const hasLoadedFromCache = useRef(false)
 
-  // Load visa data and calculate days
+  // Save function to ensure data is saved
+  const saveToCache = () => {
+    const data = {
+      daysInUS2023,
+      daysInUS2024,
+      daysInUS2025,
+      institutionName,
+      institutionStreet1,
+      institutionStreet2,
+      institutionCity,
+      institutionState,
+      institutionZip,
+      institutionPhone,
+      dsoName,
+      dsoEmail,
+      dsoPhone
+    }
+    localStorage.setItem('filing_program_presence', JSON.stringify(data))
+  }
+
+  // Load cached data and visa data on mount
   useEffect(() => {
+    hasLoadedFromCache.current = false
+    // Load cached program presence data
+    try {
+      const cached = localStorage.getItem('filing_program_presence')
+      if (cached) {
+        const data = JSON.parse(cached)
+        setInstitutionName(data.institutionName || '')
+        setInstitutionStreet1(data.institutionStreet1 || '')
+        setInstitutionStreet2(data.institutionStreet2 || '')
+        setInstitutionCity(data.institutionCity || '')
+        setInstitutionState(data.institutionState || '')
+        setInstitutionZip(data.institutionZip || '')
+        setInstitutionPhone(data.institutionPhone || '')
+        setDsoName(data.dsoName || '')
+        setDsoEmail(data.dsoEmail || '')
+        setDsoPhone(data.dsoPhone || '')
+        // Load cached days if available (will be recalculated from visa data anyway)
+        if (data.daysInUS2023) setDaysInUS2023(data.daysInUS2023)
+        if (data.daysInUS2024) setDaysInUS2024(data.daysInUS2024)
+        if (data.daysInUS2025) setDaysInUS2025(data.daysInUS2025)
+      }
+    } catch (e) {
+      console.error('Error loading cached program presence data:', e)
+    }
+
+    // Load visa data and calculate days for all years
     const savedVisaData = localStorage.getItem('filing_visa_status')
     if (savedVisaData) {
       try {
         const visaData = JSON.parse(savedVisaData)
-        const calculatedDays = calculateDaysInUS(visaData)
-        setDaysInUS(calculatedDays.toString())
+        const days2023 = calculateDaysInUS(visaData, 2023)
+        const days2024 = calculateDaysInUS(visaData, 2024)
+        const days2025 = calculateDaysInUS(visaData, 2025)
+        setDaysInUS2023(days2023.toString())
+        setDaysInUS2024(days2024.toString())
+        setDaysInUS2025(days2025.toString())
       } catch (e) {
         console.error('Error parsing visa data:', e)
       }
     }
-  }, [])
+    
+    setTimeout(() => {
+      hasLoadedFromCache.current = true
+    }, 0)
+  }, [location.pathname])
 
-  // Calculate days in US (same logic as Income page)
-  const calculateDaysInUS = (visaData) => {
+  // Save to cache whenever form data changes (but not before loading from cache)
+  useEffect(() => {
+    if (!hasLoadedFromCache.current) return
+    saveToCache()
+  }, [daysInUS2023, daysInUS2024, daysInUS2025, institutionName, institutionStreet1, institutionStreet2, institutionCity, institutionState, institutionZip, institutionPhone, dsoName, dsoEmail, dsoPhone])
+
+  // Calculate days in US for a specific tax year
+  const calculateDaysInUS = (visaData, year = 2025) => {
     if (!visaData || !visaData.dateEnteredUS) return 0
 
-    const yearStart = new Date('2025-01-01')
-    const yearEnd = new Date('2025-12-31')
-    const entryDate = new Date(visaData.dateEnteredUS)
+    const yearStart = new Date(`${year}-01-01`)
+    const yearEnd = new Date(`${year}-12-31`)
+    const initialEntryDate = new Date(visaData.dateEnteredUS)
+    
+    // Reset time to start of day for accurate date comparison
+    yearStart.setHours(0, 0, 0, 0)
+    yearEnd.setHours(0, 0, 0, 0)
+    initialEntryDate.setHours(0, 0, 0, 0)
 
-    if (entryDate > yearEnd) return 0
+    // If entry date is after the year, return 0
+    if (initialEntryDate > yearEnd) return 0
 
-    const startDate = entryDate > yearStart ? entryDate : yearStart
+    // Determine the effective end date (program end or year end, whichever is earlier)
+    const programEnd = visaData.programEndDate ? new Date(visaData.programEndDate) : null
+    if (programEnd) {
+      programEnd.setHours(0, 0, 0, 0)
+    }
+    const effectiveEndDate = programEnd && programEnd < yearEnd ? programEnd : yearEnd
 
+    // If no exits, calculate days from entry (or year start) to effective end
     if (visaData.exitedUSA === 'no' || !visaData.exitEntries || visaData.exitEntries.length === 0) {
-      const endDate = visaData.programEndDate ? new Date(visaData.programEndDate) : yearEnd
-      const finalEndDate = endDate < yearEnd ? endDate : yearEnd
+      const startDate = initialEntryDate > yearStart ? initialEntryDate : yearStart
       
-      if (finalEndDate < startDate) return 0
+      if (effectiveEndDate < startDate) return 0
       
-      const diffTime = finalEndDate - startDate
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+      // Calculate inclusive days (both start and end dates count)
+      const diffTime = effectiveEndDate - startDate
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
       return diffDays > 0 ? diffDays : 0
     }
 
+    // Handle exits and re-entries
     let totalDays = 0
-    let currentStart = startDate
-
-    const sortedExits = [...visaData.exitEntries]
+    
+    // Get valid exit/entry pairs and sort by exit date
+    const validExits = visaData.exitEntries
       .filter(e => e.exitDate && e.entryDate)
-      .map(e => ({
-        exit: new Date(e.exitDate),
-        entry: new Date(e.entryDate)
-      }))
+      .map(e => {
+        const exit = new Date(e.exitDate)
+        const entry = new Date(e.entryDate)
+        exit.setHours(0, 0, 0, 0)
+        entry.setHours(0, 0, 0, 0)
+        return { exit, entry }
+      })
       .sort((a, b) => a.exit - b.exit)
 
-    for (const exitEntry of sortedExits) {
-      if (exitEntry.exit < currentStart) {
-        if (exitEntry.entry > currentStart && exitEntry.entry <= yearEnd) {
-          currentStart = exitEntry.entry
+    // Start from initial entry date or year start, whichever is later
+    let periodStart = initialEntryDate > yearStart ? initialEntryDate : yearStart
+
+    // Process each exit/entry pair
+    for (const exitEntry of validExits) {
+      // If exit is before our current period start, check if re-entry affects us
+      if (exitEntry.exit < periodStart) {
+        // If re-entry is after period start and within the year, update period start
+        if (exitEntry.entry > periodStart && exitEntry.entry <= yearEnd) {
+          periodStart = exitEntry.entry > yearStart ? exitEntry.entry : yearStart
         }
         continue
       }
 
-      if (exitEntry.exit >= currentStart && exitEntry.exit <= yearEnd) {
-        const exitDate = exitEntry.exit > yearEnd ? yearEnd : exitEntry.exit
-        if (exitDate >= currentStart) {
-          const diffTime = exitDate - currentStart
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+      // If exit is after the effective end date, we're done
+      if (exitEntry.exit > effectiveEndDate) {
+        // Count remaining days from periodStart to effectiveEndDate
+        if (periodStart <= effectiveEndDate) {
+          const diffTime = effectiveEndDate - periodStart
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
           totalDays += diffDays > 0 ? diffDays : 0
         }
+        return totalDays
       }
 
-      if (exitEntry.entry >= yearStart && exitEntry.entry <= yearEnd) {
-        currentStart = exitEntry.entry
-      } else if (exitEntry.entry > yearEnd) {
-        break
-      } else if (exitEntry.entry < yearStart) {
-        currentStart = yearStart
+      // Count days from periodStart to exit date (inclusive)
+      // Clamp exit date to year boundaries
+      const exitDate = exitEntry.exit > yearEnd ? yearEnd : exitEntry.exit
+      if (exitDate >= periodStart) {
+        const diffTime = exitDate - periodStart
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
+        totalDays += diffDays > 0 ? diffDays : 0
+      }
+
+      // Update periodStart to re-entry date (if within year) or continue from where we left off
+      if (exitEntry.entry > yearEnd) {
+        // Re-entry is after the year, we're done
+        return totalDays
+      } else if (exitEntry.entry >= yearStart) {
+        // Re-entry is within the year, start new period from re-entry
+        periodStart = exitEntry.entry
+      } else {
+        // Re-entry is before the year, start from year start
+        periodStart = yearStart
       }
     }
 
-    if (currentStart <= yearEnd) {
-      const endDate = visaData.programEndDate ? new Date(visaData.programEndDate) : yearEnd
-      const finalEndDate = endDate < yearEnd ? endDate : yearEnd
-      
-      if (finalEndDate >= currentStart) {
-        const diffTime = finalEndDate - currentStart
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
-        totalDays += diffDays > 0 ? diffDays : 0
-      }
+    // Calculate remaining days from last period start to effective end date
+    if (periodStart <= effectiveEndDate) {
+      const diffTime = effectiveEndDate - periodStart
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
+      totalDays += diffDays > 0 ? diffDays : 0
     }
 
     return totalDays
@@ -110,26 +207,13 @@ function ProgramUSPresence() {
 
   const handleContinue = () => {
     if (allFieldsCompleted) {
-      const data = {
-        daysInUS,
-        institutionName,
-        institutionStreet1,
-        institutionStreet2,
-        institutionCity,
-        institutionState,
-        institutionZip,
-        institutionPhone,
-        dsoName,
-        dsoEmail,
-        dsoPhone
-      }
-      localStorage.setItem('filing_program_presence', JSON.stringify(data))
+      saveToCache() // Ensure data is saved before navigation
       navigate('/filing/prior_visa_history')
     }
   }
 
   const allFieldsCompleted = 
-    daysInUS !== '' &&
+    daysInUS2025 !== '' &&
     institutionName !== '' &&
     institutionStreet1 !== '' &&
     institutionCity !== '' &&
@@ -172,17 +256,44 @@ function ProgramUSPresence() {
             </div>
 
             <div className="space-y-3">
-              {/* Days in U.S. */}
+              {/* Days in U.S. for multiple years */}
               <QuestionCard>
-                <label className="block text-xs font-semibold text-ink mb-1.5">
-                  Days in U.S. (2025)
-                </label>
-                <input
-                  type="number"
-                  value={daysInUS}
-                  readOnly
-                  className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-stone-50 text-ink font-medium rounded-full cursor-not-allowed"
-                />
+                <h3 className="text-xs font-semibold text-ink mb-3">Days in U.S.</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Days in U.S. (2023)
+                    </label>
+                    <input
+                      type="number"
+                      value={daysInUS2023}
+                      readOnly
+                      className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-stone-50 text-ink font-medium rounded-full cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Days in U.S. (2024)
+                    </label>
+                    <input
+                      type="number"
+                      value={daysInUS2024}
+                      readOnly
+                      className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-stone-50 text-ink font-medium rounded-full cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Days in U.S. (2025)
+                    </label>
+                    <input
+                      type="number"
+                      value={daysInUS2025}
+                      readOnly
+                      className="w-full px-3 py-1.5 text-sm border-2 border-slate-300 bg-stone-50 text-ink font-medium rounded-full cursor-not-allowed"
+                    />
+                  </div>
+                </div>
               </QuestionCard>
 
               {/* Academic Institution Section */}

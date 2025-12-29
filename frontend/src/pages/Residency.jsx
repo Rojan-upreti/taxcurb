@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
@@ -7,12 +7,51 @@ import FilingProgress from '../components/FilingProgress'
 
 function Residency() {
   const navigate = useNavigate()
+  const location = useLocation()
   
   const [usCitizen, setUsCitizen] = useState(null)
   const [greenCardHolder, setGreenCardHolder] = useState(null)
+  const hasLoadedFromCache = useRef(false)
+
+  // Save function to ensure data is saved
+  const saveToCache = () => {
+    const residencyData = {
+      usCitizen,
+      greenCardHolder
+    }
+    localStorage.setItem('filing_residency', JSON.stringify(residencyData))
+  }
+
+  // Load cached data on mount and whenever location changes (navigation)
+  useEffect(() => {
+    hasLoadedFromCache.current = false
+    try {
+      const cached = localStorage.getItem('filing_residency')
+      if (cached) {
+        const data = JSON.parse(cached)
+        setUsCitizen(data.usCitizen ?? null)
+        setGreenCardHolder(data.greenCardHolder ?? null)
+      }
+      setTimeout(() => {
+        hasLoadedFromCache.current = true
+      }, 0)
+    } catch (e) {
+      console.error('Error loading cached residency data:', e)
+      setTimeout(() => {
+        hasLoadedFromCache.current = true
+      }, 0)
+    }
+  }, [location.pathname])
+
+  // Save to cache whenever form data changes (but not before loading from cache)
+  useEffect(() => {
+    if (!hasLoadedFromCache.current) return
+    saveToCache()
+  }, [usCitizen, greenCardHolder])
 
   const handleContinue = () => {
     if (usCitizen === 'no' && greenCardHolder === 'no') {
+      saveToCache() // Ensure data is saved before navigation
       navigate('/filing/visa_status')
     }
   }
@@ -73,7 +112,13 @@ function Residency() {
                     <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
                       Were you a U.S. citizen on the last day of 2025?
                     </h2>
-                    <YesNoButtons value={usCitizen} onChange={setUsCitizen} />
+                    <YesNoButtons 
+                      value={usCitizen} 
+                      onChange={(value) => {
+                        setUsCitizen(value)
+                        setTimeout(saveToCache, 100)
+                      }} 
+                    />
                   </QuestionCard>
 
                   {/* Question 2: Green Card Holder */}
@@ -82,7 +127,13 @@ function Residency() {
                       <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
                         Did you hold a green card at any time in 2025?
                       </h2>
-                      <YesNoButtons value={greenCardHolder} onChange={setGreenCardHolder} />
+                      <YesNoButtons 
+                        value={greenCardHolder} 
+                        onChange={(value) => {
+                          setGreenCardHolder(value)
+                          setTimeout(saveToCache, 100)
+                        }} 
+                      />
                     </QuestionCard>
                   )}
 
