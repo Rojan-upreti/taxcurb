@@ -25,12 +25,10 @@ function Navbar() {
               <Link to="/" className="text-sm text-slate-700 hover:text-ink">Home</Link>
               <Link to="/about" className="text-sm text-slate-700 hover:text-ink">About</Link>
               <Link to="/tutorial" className="text-sm text-slate-700 hover:text-ink">Tutorial</Link>
+              <Link to="/tax-tool" className="text-sm text-slate-700 hover:text-ink">Tax Tools</Link>
             </div>
             {currentUser ? (
               <div className="flex items-center gap-4">
-                <Link to="/tax-tool" className="text-sm text-slate-700 hover:text-ink hidden md:block">
-                  Tax Tools
-                </Link>
                 <span className="text-sm text-slate-600 hidden md:block">
                   {currentUser.email}
                 </span>

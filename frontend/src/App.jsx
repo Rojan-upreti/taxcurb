@@ -130,19 +130,11 @@ function App() {
           <Route path="/tutorial" element={<Tutorial />} />
           <Route 
             path="/tax-tool" 
-            element={
-              <ProtectedRoute>
-                <TaxTool />
-              </ProtectedRoute>
-            } 
+            element={<TaxTool />} 
           />
           <Route 
             path="/tax-tool/car-interest-deduction-calculator" 
-            element={
-              <ProtectedRoute>
-                <TaxCalculator />
-              </ProtectedRoute>
-            } 
+            element={<TaxCalculator />} 
           />
         </Routes>
       </AuthProvider>
