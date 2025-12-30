@@ -83,7 +83,7 @@ export async function fillForm8843(formData) {
               // If selection fails, try setting as text (some dropdowns allow this)
               try {
                 if (field.setText) {
-                  field.setText(String(value));
+          field.setText(String(value));
                 } else {
                   throw new Error('Cannot set dropdown value');
                 }
@@ -353,19 +353,19 @@ function fillCheckboxes(form, formData) {
           checkboxYes.check();
           try {
             checkboxNo.uncheck();
-          } catch (e) {
+      } catch (e) {
             // Ignore uncheck errors
-          }
+      }
           filledCount++;
           console.log(`  ✓ Checked: c1_2[0] (Exempt 5 years: Yes - entered ${yearsSince} years ago)`);
         } else {
           checkboxNo.check();
-          try {
+      try {
             checkboxYes.uncheck();
-          } catch (e) {
+      } catch (e) {
             // Ignore uncheck errors
           }
-          filledCount++;
+        filledCount++;
           console.log(`  ✓ Checked: c1_2[1] (Exempt 5 years: No - entered ${yearsSince} years ago)`);
         }
       } catch (e) {
@@ -384,9 +384,9 @@ function fillCheckboxes(form, formData) {
       } catch (e) {
         // Ignore uncheck errors
       }
-      filledCount++;
+        filledCount++;
       console.log('  ✓ Checked: c1_3[1] (Applied for PR: No - default)');
-    } catch (e) {
+      } catch (e) {
       console.warn('  ⚠️  Could not set c1_3 checkboxes:', e.message);
     }
   } catch (e) {

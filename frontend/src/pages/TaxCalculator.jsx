@@ -30,8 +30,10 @@ function TaxCalculator() {
     purchasePrice: '',
     downPayment: '',
     loanTermMonths: '',
+    customLoanTermMonths: '',
     APR: '',
     monthlyPayment: '',
+    manualMonthlyPayment: false, // Track if user manually entered monthly payment
     loanStartDate: '',
     isLease: false,
     personalUse: true,
@@ -51,6 +53,63 @@ function TaxCalculator() {
   const [error, setError] = useState('')
   const [eligibility, setEligibility] = useState(null)
   const [calculation, setCalculation] = useState(null)
+
+  // Auto-calculate monthly payment when loan details change
+  useEffect(() => {
+    // Skip auto-calculation if user has manually entered monthly payment
+    if (loanData.manualMonthlyPayment) {
+      return
+    }
+    
+    const calculateMonthlyPayment = () => {
+      const purchasePrice = parseFloat(loanData.purchasePrice)
+      const downPayment = parseFloat(loanData.downPayment) || 0
+      const apr = parseFloat(loanData.APR)
+      
+      // Get loan term - use custom if "other" is selected
+      let loanTermMonths = null
+      if (loanData.loanTermMonths === 'other') {
+        loanTermMonths = parseInt(loanData.customLoanTermMonths)
+      } else if (loanData.loanTermMonths) {
+        loanTermMonths = parseInt(loanData.loanTermMonths)
+    }
+      
+      // Only calculate if all required fields are present and valid
+      if (purchasePrice && !isNaN(purchasePrice) && purchasePrice > 0 &&
+          !isNaN(downPayment) && downPayment >= 0 &&
+          apr && !isNaN(apr) && apr > 0 &&
+          loanTermMonths && !isNaN(loanTermMonths) && loanTermMonths > 0) {
+        
+        const principal = purchasePrice - downPayment
+        
+        if (principal > 0) {
+          // Monthly interest rate (APR / 12 / 100)
+          const monthlyRate = apr / 12 / 100
+          
+          // Calculate monthly payment using standard loan formula
+          // M = P * [r(1+r)^n] / [(1+r)^n - 1]
+          const numerator = monthlyRate * Math.pow(1 + monthlyRate, loanTermMonths)
+          const denominator = Math.pow(1 + monthlyRate, loanTermMonths) - 1
+          const monthlyPayment = principal * (numerator / denominator)
+          
+          // Round to 2 decimal places
+          const roundedPayment = Math.round(monthlyPayment * 100) / 100
+          
+          // Update monthly payment
+          setLoanData(prev => ({ ...prev, monthlyPayment: roundedPayment.toFixed(2) }))
+      } else {
+          // Principal is 0 or negative, clear monthly payment
+          setLoanData(prev => ({ ...prev, monthlyPayment: '' }))
+        }
+      } else {
+        // Not all fields are valid, clear monthly payment
+        setLoanData(prev => ({ ...prev, monthlyPayment: '' }))
+      }
+    }
+    
+    calculateMonthlyPayment()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loanData.purchasePrice, loanData.downPayment, loanData.APR, loanData.loanTermMonths, loanData.customLoanTermMonths])
 
   const handleVINDecode = async () => {
     if (!vehicleData.vin || vehicleData.vin.length < 11) {
@@ -101,7 +160,7 @@ function TaxCalculator() {
         modelYear: modelYearItem?.Value || '',
         plantCountry: plantCountryItem?.Value || null,
         assembledInUSA: plantCountryItem?.Value === 'UNITED STATES (USA)',
-      }
+        }
       
       setVehicleData(updatedVehicleData)
       setCurrentStep(2) // Move to confirmation step
@@ -116,32 +175,32 @@ function TaxCalculator() {
   useEffect(() => {
     const checkEligibility = async () => {
       if (currentStep === 4 && vehicleData.purchaseDate && vehicleData.make && vehicleData.model && !eligibility && !loading) {
-        try {
-          setLoading(true)
-          setError('')
-          
-          const loanStartDate = loanData.loanStartDate || vehicleData.purchaseDate
+    try {
+      setLoading(true)
+      setError('')
+      
+      const loanStartDate = loanData.loanStartDate || vehicleData.purchaseDate
 
-          const eligibilityResult = await checkVehicleEligibility(
-            {
-              ...vehicleData,
-              purchaseDate: vehicleData.purchaseDate,
-            },
-            {
-              ...loanData,
-              loanStartDate,
-              taxYear: parseInt(taxData.taxYear),
-            }
-          )
-
-          setEligibility(eligibilityResult)
-        } catch (err) {
-          console.error('Eligibility check error:', err)
-          setError(err.message || 'Failed to check eligibility')
-        } finally {
-          setLoading(false)
+      const eligibilityResult = await checkVehicleEligibility(
+        {
+          ...vehicleData,
+          purchaseDate: vehicleData.purchaseDate,
+        },
+        {
+          ...loanData,
+          loanStartDate,
+          taxYear: parseInt(taxData.taxYear),
         }
-      }
+      )
+
+      setEligibility(eligibilityResult)
+    } catch (err) {
+      console.error('Eligibility check error:', err)
+      setError(err.message || 'Failed to check eligibility')
+    } finally {
+      setLoading(false)
+    }
+  }
     }
     
     checkEligibility()
@@ -198,8 +257,23 @@ function TaxCalculator() {
       setError('')
       
       // Validate loan data
-      if (!loanData.purchasePrice || !loanData.loanTermMonths || !loanData.APR) {
+      if (!loanData.purchasePrice || !loanData.APR) {
         setError('Please fill in all required loan information')
+        return
+      }
+
+      if (!loanData.loanTermMonths || (loanData.loanTermMonths === 'other' && !loanData.customLoanTermMonths)) {
+        setError('Please select or enter a loan term')
+        return
+      }
+
+      // Use custom loan term if "other" is selected, otherwise use the selected value
+      const loanTermMonths = loanData.loanTermMonths === 'other' 
+        ? parseInt(loanData.customLoanTermMonths) 
+        : parseInt(loanData.loanTermMonths)
+
+      if (isNaN(loanTermMonths) || loanTermMonths <= 0) {
+        setError('Please enter a valid loan term')
         return
       }
 
@@ -209,7 +283,7 @@ function TaxCalculator() {
           ...loanData,
           purchasePrice: parseFloat(loanData.purchasePrice),
           downPayment: parseFloat(loanData.downPayment) || 0,
-          loanTermMonths: parseInt(loanData.loanTermMonths),
+          loanTermMonths: loanTermMonths,
           APR: parseFloat(loanData.APR),
           monthlyPayment: loanData.monthlyPayment ? parseFloat(loanData.monthlyPayment) : null,
           loanStartDate: loanData.loanStartDate || vehicleData.purchaseDate,
@@ -287,21 +361,21 @@ function TaxCalculator() {
       setCurrentStep(3)
     }
     
-    return (
-      <div className="space-y-6">
+      return (
+        <div className="space-y-6">
         <h2 className="text-2xl font-semibold text-ink mb-6">Confirm Vehicle Information</h2>
-        
+          
         <div className="bg-stone-50 border border-slate-200 rounded-lg p-6 mb-6">
           <h3 className="font-semibold text-slate-700 mb-4">Decoded Vehicle Information</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b border-slate-200">
               <span className="text-slate-600">Make:</span>
               <span className="font-semibold text-slate-800">{vehicleData.make || 'N/A'}</span>
-            </div>
+              </div>
             <div className="flex justify-between items-center py-2 border-b border-slate-200">
               <span className="text-slate-600">Model:</span>
               <span className="font-semibold text-slate-800">{vehicleData.model || 'N/A'}</span>
-            </div>
+                </div>
             <div className="flex justify-between items-center py-2 border-b border-slate-200">
               <span className="text-slate-600">Model Year:</span>
               <span className="font-semibold text-slate-800">{vehicleData.modelYear || 'N/A'}</span>
@@ -311,32 +385,32 @@ function TaxCalculator() {
               <span className="font-mono font-semibold text-slate-800">{vehicleData.vin}</span>
             </div>
           </div>
-        </div>
-        
+            </div>
+            
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p className="text-sm text-blue-800">
             Please verify that the vehicle information above is correct. If it's incorrect, you can go back and re-enter your VIN.
           </p>
-        </div>
-        
-        <div className="flex gap-3 pt-4">
-          <button
-            onClick={() => setCurrentStep(1)}
-            className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
-          >
-            ← Back
-          </button>
-          <button
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => setCurrentStep(1)}
+              className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+            >
+              ← Back
+            </button>
+            <button
             onClick={handleContinue}
             className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
-          >
+            >
             Continue →
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
-    )
-  }
-
+      )
+    }
+    
   const renderStep3 = () => {
     const handlePurchaseDateSubmit = () => {
       if (!vehicleData.purchaseDate) {
@@ -357,47 +431,47 @@ function TaxCalculator() {
       setCurrentStep(4) // Move to eligibility check
     }
     
-    return (
-      <div className="space-y-6">
+      return (
+        <div className="space-y-6">
         <h2 className="text-2xl font-semibold text-ink mb-6">Enter Purchase Date</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Purchase Date *</label>
-            <input
-              type="date"
-              value={vehicleData.purchaseDate}
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Purchase Date *</label>
+              <input
+                type="date"
+                value={vehicleData.purchaseDate}
               onChange={(e) => {
                 setVehicleData({ ...vehicleData, purchaseDate: e.target.value })
                 setError('')
               }}
-              min="2025-01-01"
+                min="2025-01-01"
               max="2025-12-31"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-            />
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
+              />
             <p className="text-xs text-slate-500 mt-1">Must be between January 1, 2025 and December 31, 2025</p>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex gap-3 pt-4">
-          <button
+          
+          <div className="flex gap-3 pt-4">
+            <button
             onClick={() => setCurrentStep(2)}
-            className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
-          >
-            ← Back
-          </button>
-          <button
+              className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+            >
+              ← Back
+            </button>
+            <button
             onClick={handlePurchaseDateSubmit}
             disabled={!vehicleData.purchaseDate || loading}
-            className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+              className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
             Continue →
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
-    )
-  }
-
+      )
+    }
+    
   const renderStep4 = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold text-ink mb-6">Eligibility Check</h2>
@@ -517,15 +591,45 @@ function TaxCalculator() {
         
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">Loan Term (Months) *</label>
+          <select
+            value={loanData.loanTermMonths === 'other' ? 'other' : loanData.loanTermMonths}
+            onChange={(e) => {
+              if (e.target.value === 'other') {
+                setLoanData({ ...loanData, loanTermMonths: 'other' })
+              } else {
+                setLoanData({ ...loanData, loanTermMonths: e.target.value })
+              }
+            }}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
+          >
+            <option value="">Select Loan Term</option>
+            <option value="24">24 months</option>
+            <option value="36">36 months</option>
+            <option value="48">48 months</option>
+            <option value="60">60 months</option>
+            <option value="72">72 months</option>
+            <option value="84">84 months</option>
+            <option value="other">Other</option>
+          </select>
+          {loanData.loanTermMonths === 'other' && (
+            <div className="mt-2">
           <input
             type="number"
-            value={loanData.loanTermMonths}
-            onChange={(e) => setLoanData({ ...loanData, loanTermMonths: e.target.value })}
+                value={loanData.customLoanTermMonths || ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value === '' || (parseInt(value) > 0 && parseInt(value) < 100)) {
+                    setLoanData({ ...loanData, customLoanTermMonths: value })
+                  }
+                }}
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-            placeholder="60"
-            min="12"
-            max="84"
+                placeholder="Enter months (less than 100)"
+                min="1"
+                max="99"
           />
+              <p className="text-xs text-slate-500 mt-1">Must be less than 100 months</p>
+            </div>
+          )}
         </div>
         
         <div>
@@ -547,13 +651,29 @@ function TaxCalculator() {
           <input
             type="number"
             value={loanData.monthlyPayment}
-            onChange={(e) => setLoanData({ ...loanData, monthlyPayment: e.target.value })}
+            onChange={(e) => {
+              setLoanData({ 
+                ...loanData, 
+                monthlyPayment: e.target.value,
+                manualMonthlyPayment: true // Mark as manually entered
+              })
+            }}
+            onBlur={(e) => {
+              // If user clears the field, allow auto-calculation again
+              if (!e.target.value) {
+                setLoanData(prev => ({ ...prev, manualMonthlyPayment: false }))
+              }
+            }}
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-            placeholder="Auto-calculated if left blank"
+            placeholder="Auto-calculated"
             min="0"
             step="0.01"
           />
-          <p className="text-xs text-slate-500 mt-1">Optional - will be calculated if not provided</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {loanData.manualMonthlyPayment 
+              ? 'Manually entered - clear to recalculate automatically' 
+              : 'Auto-calculated from loan details'}
+          </p>
         </div>
         
         <div>
@@ -660,7 +780,13 @@ function TaxCalculator() {
         </button>
         <button
           onClick={handleCalculate}
-          disabled={!loanData.purchasePrice || !loanData.loanTermMonths || !loanData.APR || loading}
+          disabled={
+            !loanData.purchasePrice || 
+            !loanData.APR || 
+            !loanData.loanTermMonths || 
+            (loanData.loanTermMonths === 'other' && !loanData.customLoanTermMonths) ||
+            loading
+          }
           className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Calculating...' : 'Calculate Deduction →'}
@@ -741,7 +867,7 @@ function TaxCalculator() {
               setIsLeased(null)
               setInputMethod(null)
               setVehicleData({ vin: '', make: '', model: '', modelYear: '', purchaseDate: '', assembledInUSA: null, plantCountry: null })
-              setLoanData({ purchasePrice: '', downPayment: '', loanTermMonths: '', APR: '', monthlyPayment: '', loanStartDate: '', isLease: false, personalUse: true, securedByLien: true, isUsedVehicle: false })
+              setLoanData({ purchasePrice: '', downPayment: '', loanTermMonths: '', customLoanTermMonths: '', APR: '', monthlyPayment: '', manualMonthlyPayment: false, loanStartDate: '', isLease: false, personalUse: true, securedByLien: true, isUsedVehicle: false })
               setTaxData({ taxYear: new Date().getFullYear().toString(), filingStatus: 'SINGLE', MAGI: '' })
               setEligibility(null)
               setCalculation(null)
