@@ -32,7 +32,7 @@ function Form8843Preview() {
 
     try {
       // Collect all form data
-      const taxYear = '2024'; // Default, could come from onboarding
+      const taxYear = '2025'; // Default, could come from onboarding
       const collectedData = collectFormData(currentUser.uid, taxYear);
       setFormData(collectedData);
 
@@ -69,9 +69,35 @@ function Form8843Preview() {
     }
 
     try {
-      const taxYear = formData?.taxYear || '2024';
-      const lastName = formData?.lastName || 'form';
-      const filename = `form8843_${taxYear}_${lastName}.pdf`;
+      // Generate filename: Form8843_2025_FirstName_LastName.pdf
+      const taxYear = formData?.taxYear || '2025';
+      const firstName = formData?.firstName || '';
+      const lastName = formData?.lastName || '';
+      
+      // Sanitize names: remove special characters, replace spaces with underscores, preserve capitalization
+      const sanitizeName = (name) => {
+        if (!name) return '';
+        return name
+          .trim()
+          .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+          .replace(/\s+/g, '_'); // Replace spaces with underscores
+      };
+      
+      const sanitizedFirstName = sanitizeName(firstName);
+      const sanitizedLastName = sanitizeName(lastName);
+      
+      // Build filename: Form8843_2025_FirstName_LastName.pdf
+      let filename = 'Form8843';
+      if (taxYear) filename += `_${taxYear}`;
+      if (sanitizedFirstName) filename += `_${sanitizedFirstName}`;
+      if (sanitizedLastName) filename += `_${sanitizedLastName}`;
+      filename += '.pdf';
+      
+      // Fallback if no names provided
+      if (!sanitizedFirstName && !sanitizedLastName) {
+        filename = `Form8843_${taxYear}.pdf`;
+      }
+      
       downloadPDF(pdfBase64, filename);
     } catch (err) {
       console.error('Error downloading PDF:', err);
