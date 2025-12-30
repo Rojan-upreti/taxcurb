@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import logger from '../utils/logger'
 
 /**
  * Hook to automatically save form data to localStorage whenever dependencies change
@@ -19,7 +20,7 @@ export function useFormCache(cacheKey, getFormData, setFormData, dependencies = 
         setFormData(parsed)
       }
     } catch (e) {
-      console.error(`Error loading cache for ${cacheKey}:`, e)
+      logger.error(`Error loading cache for ${cacheKey}:`, e)
     }
   }, []) // Only run on mount
 
@@ -31,7 +32,7 @@ export function useFormCache(cacheKey, getFormData, setFormData, dependencies = 
         localStorage.setItem(cacheKey, JSON.stringify(formData))
       }
     } catch (e) {
-      console.error(`Error saving cache for ${cacheKey}:`, e)
+      logger.error(`Error saving cache for ${cacheKey}:`, e)
     }
   }, dependencies) // Save whenever dependencies change
 }

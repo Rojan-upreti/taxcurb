@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
+import logger from '../utils/logger'
 import FilingProgress from '../components/FilingProgress'
 
 function Profile() {
@@ -40,7 +41,7 @@ function Profile() {
         hasLoadedFromCache.current = true
       }, 0)
     } catch (e) {
-      console.error('Error loading cached profile data:', e)
+      logger.error('Error loading cached profile data:', e)
       setTimeout(() => {
         hasLoadedFromCache.current = true
       }, 0)

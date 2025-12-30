@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
+import logger from '../utils/logger'
 import { validateEmail, validatePhone, validateZIP, formatPhone, formatZIP } from '../utils/validation'
 
 function ProgramUSPresence() {
@@ -68,7 +69,7 @@ function ProgramUSPresence() {
         if (data.daysInUS2025) setDaysInUS2025(data.daysInUS2025)
       }
     } catch (e) {
-      console.error('Error loading cached program presence data:', e)
+      logger.error('Error loading cached program presence data:', e)
     }
 
     // Load visa data and calculate days for all years
@@ -83,7 +84,7 @@ function ProgramUSPresence() {
         setDaysInUS2024(days2024.toString())
         setDaysInUS2025(days2025.toString())
       } catch (e) {
-        console.error('Error parsing visa data:', e)
+        logger.error('Error parsing visa data:', e)
       }
     }
     

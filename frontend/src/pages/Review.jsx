@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
 import Form8843Preview from '../components/Form8843Preview'
+import logger from '../utils/logger'
 
 function Review() {
   const navigate = useNavigate()
@@ -43,7 +44,7 @@ function Review() {
       const income = localStorage.getItem('filing_income')
       if (income) setIncomeData(JSON.parse(income))
     } catch (e) {
-      console.error('Error loading review data:', e)
+      logger.error('Error loading review data:', e)
     }
   }, [])
 
@@ -484,7 +485,7 @@ function Review() {
                 <button
                   onClick={() => {
                     // Navigate to submission/confirmation page when ready
-                    console.log('Submit for review')
+                    logger.info('Submit for review')
                   }}
                   className="px-6 py-2 bg-ink text-white text-xs font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
                 >

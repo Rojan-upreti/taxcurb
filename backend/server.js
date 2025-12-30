@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import logger from './utils/logger.js';
 
 dotenv.config();
 
@@ -46,13 +47,13 @@ if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && proc
       projectId: process.env.FIREBASE_PROJECT_ID,
     });
     firebaseAdminInitialized = true;
-    console.log('Firebase Admin initialized successfully');
+    logger.info('Firebase Admin initialized successfully');
   } catch (error) {
-    console.error('Error initializing Firebase Admin:', error);
-    console.log('Continuing without Firebase Admin - will use REST API only');
+    logger.error('Error initializing Firebase Admin:', error);
+    logger.info('Continuing without Firebase Admin - will use REST API only');
   }
 } else {
-  console.log('Firebase Admin credentials not found - will use REST API only');
+  logger.info('Firebase Admin credentials not found - will use REST API only');
 }
 
 // Helper function to authenticate with Firebase REST API
@@ -172,7 +173,7 @@ app.get('/api/auth/check', async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error('Auth check error:', error);
+    logger.error('Auth check error:', error);
     const cookieOptions = {
       httpOnly: true,
       sameSite: 'lax',
@@ -242,7 +243,7 @@ app.post('/api/auth/signup', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    logger.error('Signup error:', error);
     
     // Handle Firebase REST API errors
     if (error.message.includes('EMAIL_EXISTS')) {
@@ -320,7 +321,7 @@ app.post('/api/auth/signin', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Signin error:', error);
+    logger.error('Signin error:', error);
     
     // Handle Firebase REST API errors - use generic messages to prevent information leakage
     if (error.message && (error.message.includes('EMAIL_NOT_FOUND') || error.message.includes('INVALID_PASSWORD'))) {
@@ -393,7 +394,7 @@ app.post('/api/auth/verify', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Token verification error:', error);
+    logger.error('Token verification error:', error);
     res.status(401).json({ 
       error: 'Invalid or expired token' 
     });
@@ -405,15 +406,15 @@ app.post('/api/forms/8843/generate', async (req, res) => {
   try {
     const formData = req.body;
     
-    console.log('\n=== Form 8843 Generation Request ===');
-    console.log('Received form data for:', formData.firstName, formData.lastName);
+    logger.debug('\n=== Form 8843 Generation Request ===');
+    logger.debug('Received form data for:', formData.firstName, formData.lastName);
     
     const { fillForm8843 } = await import('./services/pdfService.js');
     const pdfBytes = await fillForm8843(formData);
     
     const base64PDF = Buffer.from(pdfBytes).toString('base64');
     
-    console.log('✓ PDF generated successfully\n');
+    logger.info('✓ PDF generated successfully\n');
     
     res.json({
       success: true,
@@ -421,7 +422,7 @@ app.post('/api/forms/8843/generate', async (req, res) => {
       message: 'Form 8843 generated successfully'
     });
   } catch (error) {
-    console.error('PDF generation error:', error);
+    logger.error('PDF generation error:', error);
     
     let errorMessage = 'Failed to generate PDF';
     if (error.message.includes('XFA') || error.message.includes('removing')) {
@@ -498,7 +499,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       message: 'If an account exists with this email, a password reset link has been sent.',
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error:', error);
     // Still return success to prevent email enumeration
     res.json({
       success: true,
@@ -519,7 +520,7 @@ app.get('/api/forms/8843/fields', async (req, res) => {
       count: fields.length
     });
   } catch (error) {
-    console.error('Field inspection error:', error);
+    logger.error('Field inspection error:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -548,7 +549,7 @@ app.post('/api/vehicle/decode-vin', async (req, res) => {
       vehicle: vehicleData,
     });
   } catch (error) {
-    console.error('VIN decode error:', error);
+    logger.error('VIN decode error:', error);
     res.status(500).json({ 
       error: error.message || 'Failed to decode VIN' 
     });
@@ -560,9 +561,9 @@ app.post('/api/vehicle/check-eligibility', async (req, res) => {
   try {
     const { vehicleData, loanData } = req.body;
 
-    console.log('\n=== Eligibility Check Request ===');
-    console.log('Vehicle Data:', JSON.stringify(vehicleData, null, 2));
-    console.log('Loan Data:', JSON.stringify(loanData, null, 2));
+    logger.debug('\n=== Eligibility Check Request ===');
+    logger.debug('Vehicle Data:', JSON.stringify(vehicleData, null, 2));
+    logger.debug('Loan Data:', JSON.stringify(loanData, null, 2));
 
     if (!vehicleData || !loanData) {
       return res.status(400).json({ 
@@ -574,15 +575,15 @@ app.post('/api/vehicle/check-eligibility', async (req, res) => {
     const { checkVehicleEligibility } = await import('./services/vehicleService.js');
     const eligibility = checkVehicleEligibility(vehicleData, loanData);
 
-    console.log('Eligibility Result:', JSON.stringify(eligibility, null, 2));
-    console.log('=================================\n');
+    logger.debug('Eligibility Result:', JSON.stringify(eligibility, null, 2));
+    logger.debug('=================================\n');
 
     res.json({
       success: true,
       eligibility,
     });
   } catch (error) {
-    console.error('Eligibility check error:', error);
+    logger.error('Eligibility check error:', error);
     res.status(500).json({ 
       success: false,
       error: error.message || 'Failed to check eligibility' 
@@ -609,7 +610,7 @@ app.post('/api/vehicle/calculate-interest', async (req, res) => {
       result,
     });
   } catch (error) {
-    console.error('Interest calculation error:', error);
+    logger.error('Interest calculation error:', error);
     res.status(500).json({ 
       error: error.message || 'Failed to calculate interest deduction' 
     });
@@ -619,18 +620,18 @@ app.post('/api/vehicle/calculate-interest', async (req, res) => {
 // Get vehicle makes endpoint
 app.get('/api/vehicle/makes', async (req, res) => {
   try {
-    console.log('Fetching vehicle makes from NHTSA API...');
+    logger.debug('Fetching vehicle makes from NHTSA API...');
     const { getVehicleMakes } = await import('./services/vehicleService.js');
     const makes = await getVehicleMakes();
 
-    console.log(`Successfully fetched ${makes.length} vehicle makes`);
+    logger.debug(`Successfully fetched ${makes.length} vehicle makes`);
 
     res.json({
       success: true,
       makes,
     });
   } catch (error) {
-    console.error('Error fetching makes:', error);
+    logger.error('Error fetching makes:', error);
     res.status(500).json({ 
       success: false,
       error: error.message || 'Failed to fetch vehicle makes' 
@@ -650,18 +651,18 @@ app.get('/api/vehicle/models', async (req, res) => {
       });
     }
 
-    console.log(`Fetching models for make: ${make}, year: ${year}`);
+    logger.debug(`Fetching models for make: ${make}, year: ${year}`);
     const { getVehicleModels } = await import('./services/vehicleService.js');
     const models = await getVehicleModels(make, parseInt(year));
 
-    console.log(`Found ${models.length} models for ${make} ${year}`);
+    logger.debug(`Found ${models.length} models for ${make} ${year}`);
 
     res.json({
       success: true,
       models,
     });
   } catch (error) {
-    console.error('Error fetching models:', error);
+    logger.error('Error fetching models:', error);
     res.status(500).json({ 
       success: false,
       error: error.message || 'Failed to fetch vehicle models' 
@@ -737,7 +738,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
       message: 'Password has been reset successfully. You can now sign in with your new password.',
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    logger.error('Reset password error:', error);
     res.status(500).json({ 
       error: error.message || 'Failed to reset password. Please try again.' 
     });
@@ -746,10 +747,10 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`PDF fields: http://localhost:${PORT}/api/forms/8843/fields`);
+  logger.info(`Server is running on http://localhost:${PORT}`);
+  logger.info(`Health check: http://localhost:${PORT}/health`);
+  logger.info(`PDF fields: http://localhost:${PORT}/api/forms/8843/fields`);
   if (!FIREBASE_API_KEY) {
-    console.warn('WARNING: FIREBASE_API_KEY not found in .env file');
+    logger.warn('WARNING: FIREBASE_API_KEY not found in .env file');
   }
 });

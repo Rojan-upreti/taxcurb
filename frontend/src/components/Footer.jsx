@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import logger from '../utils/logger'
 
 function Footer() {
   const currentYear = new Date().getFullYear()
@@ -71,7 +72,7 @@ function Footer() {
                   onClick={(e) => {
                     e.preventDefault()
                     // Add privacy policy link when available
-                    console.log('Privacy Policy - Coming soon')
+                    logger.info('Privacy Policy - Coming soon')
                   }}
                 >
                   Privacy Policy
@@ -84,7 +85,7 @@ function Footer() {
                   onClick={(e) => {
                     e.preventDefault()
                     // Add terms of service link when available
-                    console.log('Terms of Service - Coming soon')
+                    logger.info('Terms of Service - Coming soon')
                   }}
                 >
                   Terms of Service

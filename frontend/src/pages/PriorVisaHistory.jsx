@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
+import logger from '../utils/logger'
 import FilingProgress from '../components/FilingProgress'
 
 function PriorVisaHistory() {
@@ -38,7 +39,7 @@ function PriorVisaHistory() {
         }
       }
     } catch (e) {
-      console.error('Error loading cached prior visa history data:', e)
+      logger.error('Error loading cached prior visa history data:', e)
     }
 
     // Load visa status data to determine entry date
@@ -73,7 +74,7 @@ function PriorVisaHistory() {
           }
         }
       } catch (e) {
-        console.error('Error parsing visa data:', e)
+        logger.error('Error parsing visa data:', e)
         // Default to 2019-2025 if error
         const defaultYears = ['2019', '2020', '2021', '2022', '2023', '2024', '2025']
         setYearsToShow(defaultYears)

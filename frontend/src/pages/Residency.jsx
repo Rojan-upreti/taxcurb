@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
+import logger from '../utils/logger'
 import FilingProgress from '../components/FilingProgress'
 
 function Residency() {
@@ -36,7 +37,7 @@ function Residency() {
         hasLoadedFromCache.current = true
       }, 0)
     } catch (e) {
-      console.error('Error loading cached residency data:', e)
+      logger.error('Error loading cached residency data:', e)
       setTimeout(() => {
         hasLoadedFromCache.current = true
       }, 0)

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
+import logger from '../utils/logger'
 import FilingProgress from '../components/FilingProgress'
 
 function IdentityTravelDocument() {
@@ -23,10 +24,10 @@ function IdentityTravelDocument() {
       }
       localStorage.setItem('filing_identity_travel', JSON.stringify(data))
     } catch (e) {
-      console.error('Error saving identity travel data to cache:', e)
+      logger.error('Error saving identity travel data to cache:', e)
       // Handle quota exceeded error gracefully
       if (e.name === 'QuotaExceededError') {
-        console.warn('localStorage quota exceeded. Consider clearing old data.')
+        logger.warn('localStorage quota exceeded. Consider clearing old data.')
       }
     }
   }
@@ -48,7 +49,7 @@ function IdentityTravelDocument() {
         }
       }
     } catch (e) {
-      console.error('Error loading cached identity data:', e)
+      logger.error('Error loading cached identity data:', e)
     }
 
     // Load profile data to get all citizenships
@@ -67,7 +68,7 @@ function IdentityTravelDocument() {
           setPassports([{ country: profile.countryOfCitizenship, number: '' }])
         }
       } catch (e) {
-        console.error('Error parsing profile data:', e)
+        logger.error('Error parsing profile data:', e)
       }
     }
     

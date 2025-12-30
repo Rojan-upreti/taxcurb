@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { signUp, signIn, forgotPassword } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
+import logger from '../utils/logger'
 
 function Auth() {
   const location = useLocation()
@@ -80,7 +81,7 @@ function Auth() {
       // Success - redirect to dashboard
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      console.error('Signup error:', err)
+      logger.error('Signup error:', err)
       // Handle backend API errors
       if (err.message) {
         setError(err.message)
@@ -110,7 +111,7 @@ function Auth() {
       // Success - redirect to dashboard
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      console.error('Signin error:', err)
+      logger.error('Signin error:', err)
       // Handle backend API errors
       if (err.message) {
         setError(err.message)

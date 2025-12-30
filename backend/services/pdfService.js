@@ -2,6 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,8 +14,8 @@ const __dirname = path.dirname(__filename);
  */
 export async function fillForm8843(formData) {
   try {
-    console.log('\n=== Form 8843 Fill ===');
-    console.log('Form data received:', {
+    logger.debug('\n=== Form 8843 Fill ===');
+    logger.debug('Form data received:', {
       name: formData.firstName && formData.lastName 
         ? `${formData.firstName} ${formData.lastName}` 
         : 'N/A',
@@ -29,7 +30,7 @@ export async function fillForm8843(formData) {
     const pdfDoc = await PDFDocument.load(templateBytes);
     const form = pdfDoc.getForm();
     
-    console.log(`\nFilling form fields...`);
+    logger.debug(`\nFilling form fields...`);
     
     // Map form data to PDF fields
     // Based on Form 8843 structure and the field names we discovered
@@ -65,7 +66,7 @@ export async function fillForm8843(formData) {
               // Field doesn't exist or is a different type
               errorCount++;
               errorFields.push({ fieldName, error: 'Field not found or unsupported type' });
-              console.warn(`  ⚠️  Field not found or unsupported: ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}`);
+              logger.warn(`  ⚠️  Field not found or unsupported: ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}`);
               continue;
             }
           }
@@ -94,39 +95,39 @@ export async function fillForm8843(formData) {
           }
           
           filledCount++;
-          console.log(`  ✓ ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}: ${value} (${fieldType})`);
+          logger.debug(`  ✓ ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}: ${value} (${fieldType})`);
         }
       } catch (e) {
         // Field exists but setting value failed
         errorCount++;
         errorFields.push({ fieldName, error: e.message });
-        console.warn(`  ⚠️  Failed to fill ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}: ${e.message}`);
+        logger.warn(`  ⚠️  Failed to fill ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}: ${e.message}`);
       }
     }
     
     if (errorFields.length > 0) {
-      console.warn(`  ⚠️  ${errorFields.length} fields could not be filled:`);
+      logger.warn(`  ⚠️  ${errorFields.length} fields could not be filled:`);
       errorFields.forEach(({ fieldName, error }) => {
         const shortName = fieldName.substring(fieldName.lastIndexOf('.') + 1);
-        console.warn(`    - ${shortName}: ${error}`);
+        logger.warn(`    - ${shortName}: ${error}`);
       });
     }
     
     // Handle checkboxes
-    console.log('\nFilling checkboxes...');
+    logger.debug('\nFilling checkboxes...');
     const checkboxCount = fillCheckboxes(form, formData);
     
-    console.log(`\n✓ Summary: ${filledCount} text fields filled, ${checkboxCount} checkboxes filled, ${errorCount} field errors`);
+    logger.info(`\n✓ Summary: ${filledCount} text fields filled, ${checkboxCount} checkboxes filled, ${errorCount} field errors`);
     
     // Save PDF
     const pdfBytes = await pdfDoc.save();
-    console.log(`✓ PDF generated: ${pdfBytes.length} bytes\n`);
+    logger.info(`✓ PDF generated: ${pdfBytes.length} bytes\n`);
     
     return pdfBytes;
   } catch (error) {
-    console.error('\n✗ ERROR in fillForm8843:');
-    console.error('  Message:', error.message);
-    console.error('  Stack:', error.stack);
+    logger.error('\n✗ ERROR in fillForm8843:');
+    logger.error('  Message:', error.message);
+    logger.error('  Stack:', error.stack);
     throw error;
   }
 }
@@ -138,16 +139,16 @@ export async function fillForm8843(formData) {
 async function getFieldMappings(formData) {
   const mappings = {};
   
-  console.log('\n=== Building Field Mappings ===');
-  console.log('Form data keys:', Object.keys(formData));
-  console.log('Has firstName:', !!formData.firstName);
-  console.log('Has lastName:', !!formData.lastName);
-  console.log('Has ssn:', !!formData.ssn);
-  console.log('Has passports:', Array.isArray(formData.passports) ? formData.passports.length : 'not array');
-  console.log('Has visaHistory:', !!formData.visaHistory);
-  console.log('Has daysInUS2025:', formData.daysInUS2025);
-  console.log('Has daysInUS2024:', formData.daysInUS2024);
-  console.log('Has daysInUS2023:', formData.daysInUS2023);
+  logger.debug('\n=== Building Field Mappings ===');
+  logger.debug('Form data keys:', Object.keys(formData));
+  logger.debug('Has firstName:', !!formData.firstName);
+  logger.debug('Has lastName:', !!formData.lastName);
+  logger.debug('Has ssn:', !!formData.ssn);
+  logger.debug('Has passports:', Array.isArray(formData.passports) ? formData.passports.length : 'not array');
+  logger.debug('Has visaHistory:', !!formData.visaHistory);
+  logger.debug('Has daysInUS2025:', formData.daysInUS2025);
+  logger.debug('Has daysInUS2024:', formData.daysInUS2024);
+  logger.debug('Has daysInUS2023:', formData.daysInUS2023);
   
   // ========== DEFAULT TAX YEAR FIELDS ==========
   mappings['topmostSubform[0].Page1[0].f1_01[0]'] = '01/01';
@@ -290,7 +291,7 @@ async function getFieldMappings(formData) {
   // ========== VISA HISTORY BY YEAR ==========
   // f1_28 to f1_33: Visa held for each year (2019-2024)
   if (formData.visaHistory && typeof formData.visaHistory === 'object') {
-    console.log('Processing visaHistory:', formData.visaHistory);
+    logger.debug('Processing visaHistory:', formData.visaHistory);
     const yearMapping = {
       '2019': 'topmostSubform[0].Page1[0].f1_28[0]',
       '2020': 'topmostSubform[0].Page1[0].f1_29[0]',
@@ -309,24 +310,24 @@ async function getFieldMappings(formData) {
         const singleChar = extractVisaTypeChar(yearValue);
         if (singleChar) {
           mappings[fieldName] = singleChar;
-          console.log(`  Mapped visa history ${year}: "${yearValue}" -> "${singleChar}"`);
+          logger.debug(`  Mapped visa history ${year}: "${yearValue}" -> "${singleChar}"`);
         } else {
-          console.log(`  Skipped visa history ${year}: "${yearValue}" (no valid char extracted)`);
+          logger.debug(`  Skipped visa history ${year}: "${yearValue}" (no valid char extracted)`);
         }
       } else {
-        console.log(`  No visa history for year ${year}`);
+        logger.debug(`  No visa history for year ${year}`);
       }
     }
   } else {
-    console.log('No visaHistory data found or invalid format');
+    logger.debug('No visaHistory data found or invalid format');
   }
   
   // ========== APPLIED FOR PR EXPLANATION ==========
   // f1_34: Explain applied for PR (auto-filled with empty string)
   mappings['topmostSubform[0].Page1[0].f1_34[0]'] = '';
   
-  console.log(`\nTotal mappings created: ${Object.keys(mappings).length}`);
-  console.log('Mapped fields:', Object.keys(mappings).map(k => k.substring(k.lastIndexOf('.') + 1)).join(', '));
+  logger.debug(`\nTotal mappings created: ${Object.keys(mappings).length}`);
+  logger.debug('Mapped fields:', Object.keys(mappings).map(k => k.substring(k.lastIndexOf('.') + 1)).join(', '));
   
   return mappings;
 }
@@ -357,7 +358,7 @@ function fillCheckboxes(form, formData) {
             // Ignore uncheck errors
       }
           filledCount++;
-          console.log(`  ✓ Checked: c1_2[0] (Exempt 5 years: Yes - entered ${yearsSince} years ago)`);
+          logger.debug(`  ✓ Checked: c1_2[0] (Exempt 5 years: Yes - entered ${yearsSince} years ago)`);
         } else {
           checkboxNo.check();
       try {
@@ -366,10 +367,10 @@ function fillCheckboxes(form, formData) {
             // Ignore uncheck errors
           }
         filledCount++;
-          console.log(`  ✓ Checked: c1_2[1] (Exempt 5 years: No - entered ${yearsSince} years ago)`);
+          logger.debug(`  ✓ Checked: c1_2[1] (Exempt 5 years: No - entered ${yearsSince} years ago)`);
         }
       } catch (e) {
-        console.warn('  ⚠️  Could not set c1_2 checkboxes:', e.message);
+        logger.warn('  ⚠️  Could not set c1_2 checkboxes:', e.message);
       }
     }
     
@@ -385,12 +386,12 @@ function fillCheckboxes(form, formData) {
         // Ignore uncheck errors
       }
         filledCount++;
-      console.log('  ✓ Checked: c1_3[1] (Applied for PR: No - default)');
+      logger.debug('  ✓ Checked: c1_3[1] (Applied for PR: No - default)');
       } catch (e) {
-      console.warn('  ⚠️  Could not set c1_3 checkboxes:', e.message);
+      logger.warn('  ⚠️  Could not set c1_3 checkboxes:', e.message);
     }
   } catch (e) {
-    console.warn('  ⚠️  Error filling checkboxes:', e.message);
+    logger.warn('  ⚠️  Error filling checkboxes:', e.message);
   }
   
   return filledCount;
@@ -520,7 +521,7 @@ export async function getPDFFieldNames() {
       type: field.constructor.name,
     }));
   } catch (error) {
-    console.error('Error getting field names:', error);
+    logger.error('Error getting field names:', error);
     throw error;
   }
 }

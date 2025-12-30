@@ -5,6 +5,7 @@ import {
   checkVehicleEligibility, 
   calculateVehicleInterest
 } from '../services/vehicleService'
+import logger from '../utils/logger'
 
 function TaxCalculator() {
   const navigate = useNavigate()
@@ -195,7 +196,7 @@ function TaxCalculator() {
 
       setEligibility(eligibilityResult)
     } catch (err) {
-      console.error('Eligibility check error:', err)
+      logger.error('Eligibility check error:', err)
       setError(err.message || 'Failed to check eligibility')
     } finally {
       setLoading(false)

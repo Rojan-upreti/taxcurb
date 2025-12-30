@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { collectFormData, generateForm8843, base64ToBlobURL, downloadPDF } from '../services/form8843Service';
+import logger from '../utils/logger';
 
 function Form8843Preview() {
   const { currentUser } = useAuth();
@@ -55,7 +56,7 @@ function Form8843Preview() {
         throw new Error(response.message || 'Failed to generate PDF.');
       }
     } catch (err) {
-      console.error('Error generating form:', err);
+      logger.error('Error generating form:', err);
       setError(err.message || 'Failed to generate Form 8843. Please ensure all required filing information is complete and try again.');
     } finally {
       setLoading(false);
@@ -100,7 +101,7 @@ function Form8843Preview() {
       
       downloadPDF(pdfBase64, filename);
     } catch (err) {
-      console.error('Error downloading PDF:', err);
+      logger.error('Error downloading PDF:', err);
       setError('Failed to download PDF');
     }
   };

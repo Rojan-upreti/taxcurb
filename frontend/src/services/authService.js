@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Helper function to get cookie value
@@ -34,7 +36,7 @@ export const signUp = async (email, password) => {
 
     return data;
   } catch (error) {
-    console.error('Sign up error:', error);
+    logger.error('Sign up error:', error);
     throw new Error(error.message || 'Failed to create account');
   }
 };
@@ -65,7 +67,7 @@ export const signIn = async (email, password) => {
 
     return data;
   } catch (error) {
-    console.error('Sign in error:', error);
+    logger.error('Sign in error:', error);
     throw new Error(error.message || 'Failed to sign in');
   }
 };
@@ -82,7 +84,7 @@ export const signOut = async () => {
     // Note: Cookies are cleared by backend
     return { success: true };
   } catch (error) {
-    console.error('Sign out error:', error);
+    logger.error('Sign out error:', error);
     return { success: true };
   }
 };
@@ -105,7 +107,7 @@ export const checkAuth = async () => {
     // Not authenticated
     return null;
   } catch (error) {
-    console.error('Auth check error:', error);
+    logger.error('Auth check error:', error);
     return null;
   }
 };
@@ -141,7 +143,7 @@ export const verifyToken = async (token) => {
 
     return data;
   } catch (error) {
-    console.error('Token verification error:', error);
+    logger.error('Token verification error:', error);
     throw error;
   }
 };
@@ -167,7 +169,7 @@ export const forgotPassword = async (email) => {
 
     return data;
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error:', error);
     throw new Error(error.message || 'Failed to send reset email');
   }
 };
@@ -194,7 +196,7 @@ export const resetPassword = async (oobCode, newPassword) => {
 
     return data;
   } catch (error) {
-    console.error('Reset password error:', error);
+    logger.error('Reset password error:', error);
     throw new Error(error.message || 'Failed to reset password');
   }
 };

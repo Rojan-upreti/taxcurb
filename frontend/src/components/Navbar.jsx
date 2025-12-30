@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import logger from '../utils/logger'
 
 function Navbar() {
   const { currentUser, signOut } = useAuth()
@@ -11,7 +12,7 @@ function Navbar() {
       await signOut()
       navigate('/auth', { replace: true })
     } catch (error) {
-      console.error('Logout error:', error)
+      logger.error('Logout error:', error)
     }
   }
 

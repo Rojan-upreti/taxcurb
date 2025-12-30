@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
+import logger from '../utils/logger'
 import FilingProgress from '../components/FilingProgress'
 
 function Income() {
@@ -24,7 +25,7 @@ function Income() {
       try {
         setVisaData(JSON.parse(savedVisaData))
       } catch (e) {
-        console.error('Error parsing visa data:', e)
+        logger.error('Error parsing visa data:', e)
       }
     }
   }, [])
@@ -78,10 +79,10 @@ function Income() {
         }
         localStorage.setItem('filing_income', JSON.stringify(incomeData))
       } catch (e) {
-        console.error('Error saving income data to cache:', e)
+        logger.error('Error saving income data to cache:', e)
         // Handle quota exceeded error gracefully
         if (e.name === 'QuotaExceededError') {
-          console.warn('localStorage quota exceeded. Consider clearing old data.')
+          logger.warn('localStorage quota exceeded. Consider clearing old data.')
         }
       }
     }
@@ -104,7 +105,7 @@ function Income() {
         hasLoadedFromCache.current = true
       }, 0)
     } catch (e) {
-      console.error('Error loading cached income data:', e)
+      logger.error('Error loading cached income data:', e)
       setTimeout(() => {
         hasLoadedFromCache.current = true
       }, 0)

@@ -3,6 +3,8 @@
  * Handles API calls for vehicle loan interest deduction calculator
  */
 
+import logger from '../utils/logger';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
@@ -30,7 +32,7 @@ export async function decodeVIN(vin, modelYear = null) {
     const data = await response.json();
     return data.vehicle;
   } catch (error) {
-    console.error('VIN decode error:', error);
+    logger.error('VIN decode error:', error);
     throw error;
   }
 }
@@ -43,7 +45,7 @@ export async function decodeVIN(vin, modelYear = null) {
  */
 export async function checkVehicleEligibility(vehicleData, loanData) {
   try {
-    console.log('Checking eligibility with:', { vehicleData, loanData });
+    logger.debug('Checking eligibility with:', { vehicleData, loanData });
     const response = await fetch(`${API_URL}/api/vehicle/check-eligibility`, {
       method: 'POST',
       headers: {
@@ -53,16 +55,16 @@ export async function checkVehicleEligibility(vehicleData, loanData) {
       body: JSON.stringify({ vehicleData, loanData }),
     });
 
-    console.log('Eligibility API response status:', response.status);
+    logger.debug('Eligibility API response status:', response.status);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
-      console.error('Eligibility API error response:', error);
+      logger.error('Eligibility API error response:', error);
       throw new Error(error.error || `Failed to check eligibility: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('Eligibility API response data:', data);
+    logger.debug('Eligibility API response data:', data);
     
     if (!data.success) {
       throw new Error(data.error || 'Failed to check eligibility');
@@ -74,7 +76,7 @@ export async function checkVehicleEligibility(vehicleData, loanData) {
     
     return data.eligibility;
   } catch (error) {
-    console.error('Eligibility check error:', error);
+    logger.error('Eligibility check error:', error);
     throw error;
   }
 }
@@ -105,7 +107,7 @@ export async function calculateVehicleInterest(vehicleData, loanData, taxData = 
     const data = await response.json();
     return data.result;
   } catch (error) {
-    console.error('Interest calculation error:', error);
+    logger.error('Interest calculation error:', error);
     throw error;
   }
 }
@@ -116,35 +118,35 @@ export async function calculateVehicleInterest(vehicleData, loanData, taxData = 
  */
 export async function getVehicleMakes() {
   try {
-    console.log('Fetching makes from:', `${API_URL}/api/vehicle/makes`);
+    logger.debug('Fetching makes from:', `${API_URL}/api/vehicle/makes`);
     const response = await fetch(`${API_URL}/api/vehicle/makes`, {
       method: 'GET',
       credentials: 'include',
     });
 
-    console.log('Makes API response status:', response.status);
+    logger.debug('Makes API response status:', response.status);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
-      console.error('Makes API error response:', error);
+      logger.error('Makes API error response:', error);
       throw new Error(error.error || `Failed to fetch makes: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('Makes API response data:', data);
+    logger.debug('Makes API response data:', data);
     
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch makes');
     }
     
     if (!data.makes || !Array.isArray(data.makes)) {
-      console.warn('Invalid makes data format:', data);
+      logger.warn('Invalid makes data format:', data);
       throw new Error('Invalid response format from server');
     }
     
     return data.makes;
   } catch (error) {
-    console.error('Error fetching makes:', error);
+    logger.error('Error fetching makes:', error);
     throw error;
   }
 }
@@ -158,35 +160,35 @@ export async function getVehicleMakes() {
 export async function getVehicleModels(make, year) {
   try {
     const url = `${API_URL}/api/vehicle/models?make=${encodeURIComponent(make)}&year=${year}`;
-    console.log('Fetching models from:', url);
+    logger.debug('Fetching models from:', url);
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
     });
 
-    console.log('Models API response status:', response.status);
+    logger.debug('Models API response status:', response.status);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
-      console.error('Models API error response:', error);
+      logger.error('Models API error response:', error);
       throw new Error(error.error || `Failed to fetch models: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('Models API response data:', data);
+    logger.debug('Models API response data:', data);
     
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch models');
     }
     
     if (!data.models || !Array.isArray(data.models)) {
-      console.warn('Invalid models data format:', data);
+      logger.warn('Invalid models data format:', data);
       throw new Error('Invalid response format from server');
     }
     
     return data.models;
   } catch (error) {
-    console.error('Error fetching models:', error);
+    logger.error('Error fetching models:', error);
     throw error;
   }
 }

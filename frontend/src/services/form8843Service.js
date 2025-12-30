@@ -2,6 +2,8 @@
  * Service for Form 8843 PDF generation
  */
 
+import logger from '../utils/logger';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
@@ -99,10 +101,10 @@ export const collectFormData = (userId, taxYear) => {
       usZip: addressData.usZip,
     };
     
-    console.log('Collected form data:', formData);
+    logger.debug('Collected form data:', formData);
     return formData;
   } catch (error) {
-    console.error('Error collecting form data:', error);
+    logger.error('Error collecting form data:', error);
     throw new Error('Failed to collect form data');
   }
 };
@@ -112,8 +114,8 @@ export const collectFormData = (userId, taxYear) => {
  */
 export const generateForm8843 = async (formData) => {
   try {
-    console.log('Sending form data to backend:', formData);
-    console.log('API URL:', `${API_URL}/api/forms/8843/generate`);
+    logger.debug('Sending form data to backend:', formData);
+    logger.debug('API URL:', `${API_URL}/api/forms/8843/generate`);
     
     const response = await fetch(`${API_URL}/api/forms/8843/generate`, {
       method: 'POST',
@@ -123,7 +125,7 @@ export const generateForm8843 = async (formData) => {
       body: JSON.stringify(formData),
     });
     
-    console.log('Backend response status:', response.status);
+    logger.debug('Backend response status:', response.status);
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -131,7 +133,7 @@ export const generateForm8843 = async (formData) => {
     }
     
     const data = await response.json();
-    console.log('Backend response data:', { 
+    logger.debug('Backend response data:', { 
       success: data.success, 
       hasPdf: !!data.pdf,
       message: data.message 
@@ -147,7 +149,7 @@ export const generateForm8843 = async (formData) => {
       message: data.message || 'PDF generated successfully'
     };
   } catch (error) {
-    console.error('Error generating Form 8843:', error);
+    logger.error('Error generating Form 8843:', error);
     
     // Provide user-friendly error messages
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
@@ -177,7 +179,7 @@ export const base64ToBlobURL = (base64String) => {
     const blob = new Blob([bytes], { type: 'application/pdf' });
     return URL.createObjectURL(blob);
   } catch (error) {
-    console.error('Error converting base64 to blob URL:', error);
+    logger.error('Error converting base64 to blob URL:', error);
     throw new Error('Failed to process PDF');
   }
 };
@@ -198,7 +200,7 @@ export const downloadPDF = (base64String, filename = 'form8843.pdf') => {
     // Clean up blob URL after a delay
     setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
   } catch (error) {
-    console.error('Error downloading PDF:', error);
+    logger.error('Error downloading PDF:', error);
     throw new Error('Failed to download PDF');
   }
 };

@@ -3,6 +3,8 @@
  * Handles VIN decoding, eligibility checks, and interest calculations
  */
 
+import logger from '../utils/logger.js';
+
 const NHTSA_API_BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles';
 
 /**
@@ -26,7 +28,7 @@ export async function decodeVIN(vin, modelYear = null) {
       url += `&modelyear=${modelYear}`;
     }
 
-    console.log(`Decoding VIN: ${cleanVIN}`);
+    logger.debug(`Decoding VIN: ${cleanVIN}`);
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -71,10 +73,10 @@ export async function decodeVIN(vin, modelYear = null) {
                        vehicle.PlantState.length > 0) || false,
     };
 
-    console.log('Decoded vehicle:', vehicleData);
+    logger.debug('Decoded vehicle:', vehicleData);
     return vehicleData;
   } catch (error) {
-    console.error('VIN decode error:', error);
+    logger.error('VIN decode error:', error);
     throw error;
   }
 }
@@ -277,7 +279,7 @@ export function calculateVehicleInterestDeduction(vehicleData, loanData, taxData
       status: 'ELIGIBLE',
     };
   } catch (error) {
-    console.error('Interest calculation error:', error);
+    logger.error('Interest calculation error:', error);
     throw error;
   }
 }
@@ -305,7 +307,7 @@ export async function getVehicleMakes() {
       name: make.Make_Name,
     })).sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error('Error fetching makes:', error);
+    logger.error('Error fetching makes:', error);
     throw error;
   }
 }
@@ -341,7 +343,7 @@ export async function getVehicleModels(make, year) {
       name: model.Model_Name,
     })).sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error('Error fetching models:', error);
+    logger.error('Error fetching models:', error);
     throw error;
   }
 }

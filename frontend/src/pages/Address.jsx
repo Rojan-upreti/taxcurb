@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
+import logger from '../utils/logger'
 import { validateZIP, formatZIP } from '../utils/validation'
 
 function Address() {
@@ -74,7 +75,7 @@ function Address() {
         hasLoadedFromCache.current = true
       }, 0)
     } catch (e) {
-      console.error('Error loading cached address data:', e)
+      logger.error('Error loading cached address data:', e)
       setTimeout(() => {
         hasLoadedFromCache.current = true
       }, 0)

@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
       }
       return user
     } catch (error) {
-      console.error('Auth verification error:', error)
+      logger.error('Auth verification error:', error)
       setCurrentUser(null)
       return null
     }
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(null)
       return { success: true }
     } catch (error) {
-      console.error('Sign out error:', error)
+      logger.error('Sign out error:', error)
       // Clear state even if there's an error
       setCurrentUser(null)
       return { success: true }

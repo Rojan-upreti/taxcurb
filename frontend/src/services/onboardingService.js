@@ -1,6 +1,8 @@
 // Service for managing onboarding data in localStorage
 // This will be replaced with database calls in Phase 1
 
+import logger from '../utils/logger';
+
 const STORAGE_KEY = 'taxcurb_onboarding_data';
 
 /**
@@ -22,7 +24,7 @@ export const saveOnboardingData = (userId, taxYear, answers) => {
     localStorage.setItem(key, JSON.stringify(data));
     return { success: true };
   } catch (error) {
-    console.error('Error saving onboarding data:', error);
+    logger.error('Error saving onboarding data:', error);
     return { success: false, error: error.message };
   }
 };
@@ -41,7 +43,7 @@ export const getOnboardingData = (userId, taxYear) => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting onboarding data:', error);
+    logger.error('Error getting onboarding data:', error);
     return null;
   }
 };
@@ -70,7 +72,7 @@ export const updateOnboardingAnswer = (userId, taxYear, questionKey, value) => {
     localStorage.setItem(key, JSON.stringify(data));
     return { success: true };
   } catch (error) {
-    console.error('Error updating onboarding answer:', error);
+    logger.error('Error updating onboarding answer:', error);
     return { success: false, error: error.message };
   }
 };
@@ -86,7 +88,7 @@ export const clearOnboardingData = (userId, taxYear) => {
     localStorage.removeItem(key);
     return { success: true };
   } catch (error) {
-    console.error('Error clearing onboarding data:', error);
+    logger.error('Error clearing onboarding data:', error);
     return { success: false, error: error.message };
   }
 };
