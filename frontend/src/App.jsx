@@ -19,6 +19,7 @@ import ResetPassword from './pages/ResetPassword'
 import Auth from './pages/Auth'
 import About from './pages/About'
 import Tutorial from './pages/Tutorial'
+import TaxCalculator from './pages/TaxCalculator'
 
 function App() {
   return (
@@ -126,6 +127,14 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/about" element={<About />} />
           <Route path="/tutorial" element={<Tutorial />} />
+          <Route 
+            path="/tax-calculator" 
+            element={
+              <ProtectedRoute>
+                <TaxCalculator />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

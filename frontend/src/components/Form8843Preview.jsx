@@ -32,7 +32,7 @@ function Form8843Preview() {
 
     try {
       // Collect all form data
-      const taxYear = '2025'; // Default, could come from onboarding
+      const taxYear = '2024'; // Default, could come from onboarding
       const collectedData = collectFormData(currentUser.uid, taxYear);
       setFormData(collectedData);
 
@@ -69,7 +69,7 @@ function Form8843Preview() {
     }
 
     try {
-      const taxYear = formData?.taxYear || '2025';
+      const taxYear = formData?.taxYear || '2024';
       const lastName = formData?.lastName || 'form';
       const filename = `form8843_${taxYear}_${lastName}.pdf`;
       downloadPDF(pdfBase64, filename);

@@ -175,11 +175,11 @@ function Review() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium text-slate-600">Were you a U.S. citizen on the last day of 2025?</span>
+                      <span className="font-medium text-slate-600">Were you a U.S. citizen on the last day of 2024?</span>
                       <p className="text-ink">{residencyData.usCitizen === 'yes' ? 'Yes' : residencyData.usCitizen === 'no' ? 'No' : 'N/A'}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600">Did you hold a green card at any time in 2025?</span>
+                      <span className="font-medium text-slate-600">Did you hold a green card at any time in 2024?</span>
                       <p className="text-ink">{residencyData.greenCardHolder === 'yes' ? 'Yes' : residencyData.greenCardHolder === 'no' ? 'No' : 'N/A'}</p>
                     </div>
                   </div>
@@ -476,7 +476,7 @@ function Review() {
               {/* Navigation Buttons */}
               <div className="flex justify-between gap-3 pt-4">
                 <button
-                  onClick={() => navigate('/filing/income')}
+                  onClick={() => navigate('/filing/address')}
                   className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
                 >
                   ← Back
@@ -484,7 +484,7 @@ function Review() {
                 <button
                   onClick={() => {
                     // Navigate to submission/confirmation page when ready
-                    // TODO: Implement submission logic
+                    console.log('Submit for review')
                   }}
                   className="px-6 py-2 bg-ink text-white text-xs font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
                 >

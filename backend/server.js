@@ -8,7 +8,7 @@ import { getAuth } from 'firebase-admin/auth';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5000;
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 
 // Security middleware - set security headers
@@ -523,6 +523,148 @@ app.get('/api/forms/8843/fields', async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: error.message 
+    });
+  }
+});
+
+// Vehicle Tax Calculator Endpoints
+
+// Decode VIN endpoint
+app.post('/api/vehicle/decode-vin', async (req, res) => {
+  try {
+    const { vin, modelYear } = req.body;
+
+    if (!vin) {
+      return res.status(400).json({ 
+        error: 'VIN is required' 
+      });
+    }
+
+    const { decodeVIN } = await import('./services/vehicleService.js');
+    const vehicleData = await decodeVIN(vin, modelYear);
+
+    res.json({
+      success: true,
+      vehicle: vehicleData,
+    });
+  } catch (error) {
+    console.error('VIN decode error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to decode VIN' 
+    });
+  }
+});
+
+// Check vehicle eligibility endpoint
+app.post('/api/vehicle/check-eligibility', async (req, res) => {
+  try {
+    const { vehicleData, loanData } = req.body;
+
+    console.log('\n=== Eligibility Check Request ===');
+    console.log('Vehicle Data:', JSON.stringify(vehicleData, null, 2));
+    console.log('Loan Data:', JSON.stringify(loanData, null, 2));
+
+    if (!vehicleData || !loanData) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Vehicle data and loan data are required' 
+      });
+    }
+
+    const { checkVehicleEligibility } = await import('./services/vehicleService.js');
+    const eligibility = checkVehicleEligibility(vehicleData, loanData);
+
+    console.log('Eligibility Result:', JSON.stringify(eligibility, null, 2));
+    console.log('=================================\n');
+
+    res.json({
+      success: true,
+      eligibility,
+    });
+  } catch (error) {
+    console.error('Eligibility check error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Failed to check eligibility' 
+    });
+  }
+});
+
+// Calculate vehicle interest deduction endpoint
+app.post('/api/vehicle/calculate-interest', async (req, res) => {
+  try {
+    const { vehicleData, loanData, taxData } = req.body;
+
+    if (!vehicleData || !loanData) {
+      return res.status(400).json({ 
+        error: 'Vehicle data and loan data are required' 
+      });
+    }
+
+    const { calculateVehicleInterestDeduction } = await import('./services/vehicleService.js');
+    const result = calculateVehicleInterestDeduction(vehicleData, loanData, taxData);
+
+    res.json({
+      success: true,
+      result,
+    });
+  } catch (error) {
+    console.error('Interest calculation error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to calculate interest deduction' 
+    });
+  }
+});
+
+// Get vehicle makes endpoint
+app.get('/api/vehicle/makes', async (req, res) => {
+  try {
+    console.log('Fetching vehicle makes from NHTSA API...');
+    const { getVehicleMakes } = await import('./services/vehicleService.js');
+    const makes = await getVehicleMakes();
+
+    console.log(`Successfully fetched ${makes.length} vehicle makes`);
+
+    res.json({
+      success: true,
+      makes,
+    });
+  } catch (error) {
+    console.error('Error fetching makes:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Failed to fetch vehicle makes' 
+    });
+  }
+});
+
+// Get vehicle models endpoint
+app.get('/api/vehicle/models', async (req, res) => {
+  try {
+    const { make, year } = req.query;
+
+    if (!make || !year) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Make and year are required' 
+      });
+    }
+
+    console.log(`Fetching models for make: ${make}, year: ${year}`);
+    const { getVehicleModels } = await import('./services/vehicleService.js');
+    const models = await getVehicleModels(make, parseInt(year));
+
+    console.log(`Found ${models.length} models for ${make} ${year}`);
+
+    res.json({
+      success: true,
+      models,
+    });
+  } catch (error) {
+    console.error('Error fetching models:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Failed to fetch vehicle models' 
     });
   }
 });
