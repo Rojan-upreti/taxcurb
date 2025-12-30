@@ -28,7 +28,7 @@ function Navbar() {
             </div>
             {currentUser ? (
               <div className="flex items-center gap-4">
-                <Link to="/tax-calculator" className="text-sm text-slate-700 hover:text-ink hidden md:block">
+                <Link to="/tax-tool" className="text-sm text-slate-700 hover:text-ink hidden md:block">
                   Tax Calculator
                 </Link>
                 <span className="text-sm text-slate-600 hidden md:block">

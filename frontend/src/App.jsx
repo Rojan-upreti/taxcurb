@@ -20,6 +20,7 @@ import Auth from './pages/Auth'
 import About from './pages/About'
 import Tutorial from './pages/Tutorial'
 import TaxCalculator from './pages/TaxCalculator'
+import TaxTool from './pages/TaxTool'
 
 function App() {
   return (
@@ -128,7 +129,15 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/tutorial" element={<Tutorial />} />
           <Route 
-            path="/tax-calculator" 
+            path="/tax-tool" 
+            element={
+              <ProtectedRoute>
+                <TaxTool />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/tax-tool/car-interest-deduction-calculator" 
             element={
               <ProtectedRoute>
                 <TaxCalculator />
