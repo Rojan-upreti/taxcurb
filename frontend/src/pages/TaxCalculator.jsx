@@ -2,27 +2,17 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { 
-  decodeVIN, 
   checkVehicleEligibility, 
-  calculateVehicleInterest,
-  getVehicleMakes,
-  getVehicleModels 
+  calculateVehicleInterest
 } from '../services/vehicleService'
-
-const US_STATES = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
-]
 
 function TaxCalculator() {
   const navigate = useNavigate()
   
   // Step management
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(0)
   const [inputMethod, setInputMethod] = useState(null) // 'manual', 'vin', 'plate'
+  const [isLeased, setIsLeased] = useState(null) // null, true, false
   
   // Vehicle data
   const [vehicleData, setVehicleData] = useState({
@@ -32,6 +22,7 @@ function TaxCalculator() {
     modelYear: '',
     purchaseDate: '',
     assembledInUSA: null,
+    plantCountry: null,
   })
   
   // Loan data
@@ -60,71 +51,6 @@ function TaxCalculator() {
   const [error, setError] = useState('')
   const [eligibility, setEligibility] = useState(null)
   const [calculation, setCalculation] = useState(null)
-  const [makes, setMakes] = useState([])
-  const [models, setModels] = useState([])
-  const [loadingMakes, setLoadingMakes] = useState(false)
-  const [loadingModels, setLoadingModels] = useState(false)
-
-  // Load makes on mount
-  useEffect(() => {
-    loadMakes()
-  }, [])
-
-  // Load models when make and year change
-  useEffect(() => {
-    if (vehicleData.make && vehicleData.modelYear && inputMethod === 'manual') {
-      loadModels(vehicleData.make, vehicleData.modelYear)
-    }
-  }, [vehicleData.make, vehicleData.modelYear, inputMethod])
-
-  const loadMakes = async () => {
-    try {
-      setLoadingMakes(true)
-      setError('')
-      const makesList = await getVehicleMakes()
-      console.log('Loaded makes:', makesList.length)
-      if (makesList && makesList.length > 0) {
-        setMakes(makesList)
-      } else {
-        setError('No vehicle makes found. Please try again or use VIN entry.')
-      }
-    } catch (err) {
-      console.error('Error loading makes:', err)
-      setError(`Failed to load vehicle makes: ${err.message}. Please try again or use VIN entry.`)
-      setMakes([])
-    } finally {
-      setLoadingMakes(false)
-    }
-  }
-
-  const loadModels = async (make, year) => {
-    try {
-      setLoadingModels(true)
-      setError('')
-      const modelsList = await getVehicleModels(make, parseInt(year))
-      console.log(`Loaded models for ${make} ${year}:`, modelsList.length)
-      setModels(modelsList || [])
-      if (!modelsList || modelsList.length === 0) {
-        setError(`No models found for ${make} ${year}. Please verify the make and year.`)
-      }
-    } catch (err) {
-      console.error('Error loading models:', err)
-      setError(`Failed to load models: ${err.message}`)
-      setModels([])
-    } finally {
-      setLoadingModels(false)
-    }
-  }
-
-  const handleInputMethodSelect = (method) => {
-    setInputMethod(method)
-    setCurrentStep(2)
-    setError('')
-    // Reload makes if manual entry is selected and makes list is empty
-    if (method === 'manual' && makes.length === 0 && !loadingMakes) {
-      loadMakes()
-    }
-  }
 
   const handleVINDecode = async () => {
     if (!vehicleData.vin || vehicleData.vin.length < 11) {
@@ -132,36 +58,53 @@ function TaxCalculator() {
       return
     }
 
-    if (!vehicleData.purchaseDate) {
-      setError('Please enter the purchase date')
-      return
-    }
-
     try {
       setLoading(true)
       setError('')
-      const decoded = await decodeVIN(vehicleData.vin, vehicleData.modelYear || null)
+      
+      // Clean VIN - remove spaces and convert to uppercase
+      const cleanVIN = vehicleData.vin.trim().toUpperCase().replace(/\s+/g, '')
+      
+      // Call NHTSA API directly
+      const url = `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${cleanVIN}?format=json`
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new Error(`NHTSA API error: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (!data.Results || data.Results.length === 0) {
+        throw new Error('No vehicle data found for this VIN')
+      }
+      
+      // Parse response by VariableId
+      const results = data.Results
+      const makeItem = results.find(item => item.VariableId === 26)
+      const modelItem = results.find(item => item.VariableId === 28)
+      const modelYearItem = results.find(item => item.VariableId === 29)
+      const plantCountryItem = results.find(item => item.VariableId === 75)
+      
+      // Check for errors in the response
+      const errorItem = results.find(item => item.VariableId === 143) // Error Code
+      if (errorItem && errorItem.Value && errorItem.Value !== '0') {
+        const errorTextItem = results.find(item => item.VariableId === 191) // Error Text
+        throw new Error(errorTextItem?.Value || 'Failed to decode VIN')
+      }
       
       const updatedVehicleData = {
         ...vehicleData,
-        make: decoded.make || '',
-        model: decoded.model || '',
-        modelYear: decoded.modelYear || '',
-        assembledInUSA: decoded.assembledInUSA,
+        vin: cleanVIN,
+        make: makeItem?.Value || '',
+        model: modelItem?.Value || '',
+        modelYear: modelYearItem?.Value || '',
+        plantCountry: plantCountryItem?.Value || null,
+        assembledInUSA: plantCountryItem?.Value === 'UNITED STATES (USA)',
       }
       
       setVehicleData(updatedVehicleData)
-      
-      // Check basic eligibility after VIN decode (vehicle-level checks only)
-      const eligibilityResult = await checkVehicleEligibility(
-        updatedVehicleData,
-        {
-          taxYear: parseInt(taxData.taxYear),
-        }
-      )
-      
-      setEligibility(eligibilityResult)
-      setCurrentStep(3)
+      setCurrentStep(2) // Move to confirmation step
     } catch (err) {
       setError(err.message || 'Failed to decode VIN')
     } finally {
@@ -169,65 +112,85 @@ function TaxCalculator() {
     }
   }
 
-  const handlePlateLookup = async () => {
-    // Note: Plate lookup would require a third-party API
-    // For now, we'll show an error message
-    setError('License plate lookup is not yet available. Please use VIN or manual entry.')
-  }
+  // Auto-check eligibility when entering step 4
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (currentStep === 4 && vehicleData.purchaseDate && vehicleData.make && vehicleData.model && !eligibility && !loading) {
+        try {
+          setLoading(true)
+          setError('')
+          
+          const loanStartDate = loanData.loanStartDate || vehicleData.purchaseDate
 
-  const handleCheckEligibility = async () => {
-    try {
-      setLoading(true)
-      setError('')
-      
-      // Validate required fields
-      if (!vehicleData.purchaseDate) {
-        setError('Please enter the purchase date')
-        setLoading(false)
-        return
-      }
+          const eligibilityResult = await checkVehicleEligibility(
+            {
+              ...vehicleData,
+              purchaseDate: vehicleData.purchaseDate,
+            },
+            {
+              ...loanData,
+              loanStartDate,
+              taxYear: parseInt(taxData.taxYear),
+            }
+          )
 
-      if (!vehicleData.make || !vehicleData.model || !vehicleData.modelYear) {
-        setError('Please fill in all vehicle information (make, model, and year)')
-        setLoading(false)
-        return
-      }
-
-      const purchaseDate = new Date(vehicleData.purchaseDate)
-      const loanStartDate = loanData.loanStartDate || vehicleData.purchaseDate
-
-      console.log('Checking eligibility with:', {
-        vehicleData,
-        loanData: { ...loanData, loanStartDate, taxYear: parseInt(taxData.taxYear) }
-      })
-
-      const eligibilityResult = await checkVehicleEligibility(
-        {
-          ...vehicleData,
-          purchaseDate: vehicleData.purchaseDate,
-          // For manual entry, we don't have assembledInUSA, so we'll need to check it differently
-          // or assume it needs to be verified separately
-        },
-        {
-          ...loanData,
-          loanStartDate,
-          taxYear: parseInt(taxData.taxYear),
+          setEligibility(eligibilityResult)
+        } catch (err) {
+          console.error('Eligibility check error:', err)
+          setError(err.message || 'Failed to check eligibility')
+        } finally {
+          setLoading(false)
         }
-      )
-
-      console.log('Eligibility result:', eligibilityResult)
-
-      setEligibility(eligibilityResult)
-      
-      // Always move to step 3 to show results, even if not eligible
-      setCurrentStep(3)
-    } catch (err) {
-      console.error('Eligibility check error:', err)
-      setError(err.message || 'Failed to check eligibility')
-    } finally {
-      setLoading(false)
+      }
     }
-  }
+    
+    checkEligibility()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep])
+
+  const renderStep0 = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold text-ink mb-6">Is Vehicle Leased?</h2>
+      
+      {isLeased === true && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+          <h3 className="font-semibold text-red-800 mb-2">Leased vehicles are not subject for interest deductible</h3>
+          <p className="text-sm text-red-700">
+            Only vehicles purchased with a loan are eligible for the interest deduction. 
+            Leased vehicles do not qualify for this tax benefit.
+          </p>
+        </div>
+      )}
+      
+      <div className="flex gap-4 justify-center">
+        <button
+          onClick={() => {
+            setIsLeased(true)
+          }}
+          className={`px-8 py-4 text-lg font-medium rounded-lg border-2 transition-all ${
+            isLeased === true
+              ? 'bg-red-100 border-red-500 text-red-800'
+              : 'bg-white border-slate-300 text-slate-700 hover:border-ink hover:bg-stone-50'
+          }`}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => {
+            setIsLeased(false)
+            setCurrentStep(1)
+          }}
+          className={`px-8 py-4 text-lg font-medium rounded-lg border-2 transition-all ${
+            isLeased === false
+              ? 'bg-green-100 border-green-500 text-green-800'
+              : 'bg-white border-slate-300 text-slate-700 hover:border-ink hover:bg-stone-50'
+          }`}
+        >
+          No
+        </button>
+      </div>
+    </div>
+  )
 
   const handleCalculate = async () => {
     try {
@@ -259,7 +222,7 @@ function TaxCalculator() {
       )
 
       setCalculation(result)
-      setCurrentStep(5)
+      setCurrentStep(6) // Step 6 is results
     } catch (err) {
       setError(err.message || 'Failed to calculate interest deduction')
     } finally {
@@ -269,264 +232,173 @@ function TaxCalculator() {
 
   const renderStep1 = () => (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-ink mb-6">How would you like to enter your vehicle?</h2>
+      <h2 className="text-2xl font-semibold text-ink mb-6">Enter Your Vehicle Information</h2>
       
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">VIN *</label>
+          <input
+            type="text"
+            value={vehicleData.vin}
+            onChange={(e) => setVehicleData({ ...vehicleData, vin: e.target.value.toUpperCase() })}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink font-mono"
+            placeholder="1HGBH41JXMN109186"
+            maxLength={17}
+          />
+          <p className="text-xs text-slate-500 mt-1">17-character Vehicle Identification Number</p>
+        </div>
+      </div>
+      
+      <div className="flex gap-3 pt-4">
         <button
-          onClick={() => handleInputMethodSelect('manual')}
-          className="p-6 border-2 border-slate-300 rounded-lg hover:border-ink hover:bg-stone-50 transition-all text-left"
+          onClick={() => setCurrentStep(0)}
+          className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
         >
-          <h3 className="font-semibold text-lg mb-2">Manual Entry</h3>
-          <p className="text-sm text-slate-600">Select make, model, and year manually</p>
+          ← Back
         </button>
-        
         <button
-          onClick={() => handleInputMethodSelect('vin')}
-          className="p-6 border-2 border-slate-300 rounded-lg hover:border-ink hover:bg-stone-50 transition-all text-left"
+          onClick={handleVINDecode}
+          disabled={!vehicleData.vin || vehicleData.vin.length < 11 || loading}
+          className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <h3 className="font-semibold text-lg mb-2">VIN Number</h3>
-          <p className="text-sm text-slate-600">Enter your Vehicle Identification Number</p>
-        </button>
-        
-        <button
-          onClick={() => handleInputMethodSelect('plate')}
-          className="p-6 border-2 border-slate-300 rounded-lg hover:border-ink hover:bg-stone-50 transition-all text-left"
-        >
-          <h3 className="font-semibold text-lg mb-2">License Plate</h3>
-          <p className="text-sm text-slate-600">Enter plate number and state</p>
+          {loading ? 'Decoding...' : 'Decode VIN →'}
         </button>
       </div>
     </div>
   )
 
   const renderStep2 = () => {
-    if (inputMethod === 'manual') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-ink mb-6">Enter Vehicle Information</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-700">Make *</label>
-                {!loadingMakes && makes.length === 0 && (
-                  <button
-                    onClick={loadMakes}
-                    className="text-xs text-ink hover:underline"
-                    type="button"
-                  >
-                    Retry
-                  </button>
-                )}
-              </div>
-              <select
-                value={vehicleData.make}
-                onChange={(e) => setVehicleData({ ...vehicleData, make: e.target.value, model: '' })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-                disabled={loadingMakes}
-              >
-                <option value="">
-                  {loadingMakes ? 'Loading makes...' : makes.length === 0 ? 'No makes available - Click Retry' : 'Select Make'}
-                </option>
-                {makes.map(make => (
-                  <option key={make.id} value={make.name}>{make.name}</option>
-                ))}
-              </select>
-              {loadingMakes && (
-                <p className="text-xs text-slate-500 mt-1">Loading vehicle makes from NHTSA API...</p>
-              )}
-              {!loadingMakes && makes.length === 0 && (
-                <div className="mt-2">
-                  <p className="text-xs text-red-600 mb-2">Unable to load makes. This might be due to:</p>
-                  <ul className="text-xs text-red-600 list-disc list-inside space-y-1 mb-2">
-                    <li>Backend server not running</li>
-                    <li>Network connectivity issues</li>
-                    <li>NHTSA API temporarily unavailable</li>
-                  </ul>
-                  <p className="text-xs text-slate-600">You can try clicking "Retry" above or use the VIN entry method instead.</p>
-                </div>
-              )}
-              {!loadingMakes && makes.length > 0 && (
-                <p className="text-xs text-green-600 mt-1">✓ {makes.length} makes loaded</p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Model Year *</label>
-              <input
-                type="number"
-                value={vehicleData.modelYear}
-                onChange={(e) => setVehicleData({ ...vehicleData, modelYear: e.target.value, model: '' })}
-                min="2025"
-                max="2030"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-                placeholder="2025"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Model *</label>
-              <select
-                value={vehicleData.model}
-                onChange={(e) => setVehicleData({ ...vehicleData, model: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-                disabled={loadingModels || !vehicleData.make || !vehicleData.modelYear}
-              >
-                <option value="">{loadingModels ? 'Loading...' : 'Select Model'}</option>
-                {models.map(model => (
-                  <option key={model.id} value={model.name}>{model.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Purchase Date *</label>
-              <input
-                type="date"
-                value={vehicleData.purchaseDate}
-                onChange={(e) => setVehicleData({ ...vehicleData, purchaseDate: e.target.value })}
-                min="2025-01-01"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-              />
-              <p className="text-xs text-slate-500 mt-1">Must be purchased in 2025 or later</p>
-            </div>
-          </div>
-          
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
-            >
-              ← Back
-            </button>
-            <button
-              onClick={handleCheckEligibility}
-              disabled={!vehicleData.make || !vehicleData.model || !vehicleData.modelYear || !vehicleData.purchaseDate || loading}
-              className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Checking...' : 'Check Eligibility →'}
-            </button>
-          </div>
-        </div>
-      )
+    const handleContinue = () => {
+      // Check Model Year - must be 2025 or later
+      const modelYearNum = parseInt(vehicleData.modelYear)
+      if (!vehicleData.modelYear || isNaN(modelYearNum) || modelYearNum < 2025) {
+        setError('Your vehicle is not eligible. The vehicle model year must be 2025 or later for interest deduction.')
+        return
+      }
+      
+      // Check Plant Country
+      if (vehicleData.plantCountry !== 'UNITED STATES (USA)') {
+        setError('Your vehicle is not eligible. The vehicle must be assembled in the United States.')
+        return
+      }
+      
+      // All checks passed, proceed to purchase date step
+      setError('')
+      setCurrentStep(3)
     }
     
-    if (inputMethod === 'vin') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-ink mb-6">Enter VIN Number</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">VIN *</label>
-              <input
-                type="text"
-                value={vehicleData.vin}
-                onChange={(e) => setVehicleData({ ...vehicleData, vin: e.target.value.toUpperCase() })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink font-mono"
-                placeholder="1HGBH41JXMN109186"
-                maxLength={17}
-              />
-              <p className="text-xs text-slate-500 mt-1">17-character Vehicle Identification Number</p>
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold text-ink mb-6">Confirm Vehicle Information</h2>
+        
+        <div className="bg-stone-50 border border-slate-200 rounded-lg p-6 mb-6">
+          <h3 className="font-semibold text-slate-700 mb-4">Decoded Vehicle Information</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center py-2 border-b border-slate-200">
+              <span className="text-slate-600">Make:</span>
+              <span className="font-semibold text-slate-800">{vehicleData.make || 'N/A'}</span>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Model Year (Optional)</label>
-              <input
-                type="number"
-                value={vehicleData.modelYear}
-                onChange={(e) => setVehicleData({ ...vehicleData, modelYear: e.target.value })}
-                min="2025"
-                max="2030"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-                placeholder="2025"
-              />
+            <div className="flex justify-between items-center py-2 border-b border-slate-200">
+              <span className="text-slate-600">Model:</span>
+              <span className="font-semibold text-slate-800">{vehicleData.model || 'N/A'}</span>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Purchase Date *</label>
-              <input
-                type="date"
-                value={vehicleData.purchaseDate}
-                onChange={(e) => setVehicleData({ ...vehicleData, purchaseDate: e.target.value })}
-                min="2025-01-01"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-              />
+            <div className="flex justify-between items-center py-2 border-b border-slate-200">
+              <span className="text-slate-600">Model Year:</span>
+              <span className="font-semibold text-slate-800">{vehicleData.modelYear || 'N/A'}</span>
             </div>
-          </div>
-          
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
-            >
-              ← Back
-            </button>
-            <button
-              onClick={handleVINDecode}
-              disabled={!vehicleData.vin || vehicleData.vin.length < 11 || loading}
-              className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Decoding...' : 'Decode VIN →'}
-            </button>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-slate-600">VIN:</span>
+              <span className="font-mono font-semibold text-slate-800">{vehicleData.vin}</span>
+            </div>
           </div>
         </div>
-      )
-    }
-    
-    if (inputMethod === 'plate') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-ink mb-6">Enter License Plate</h2>
-          
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> License plate lookup requires a third-party API. 
-              Please use VIN or manual entry for now.
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">License Plate</label>
-              <input
-                type="text"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-                placeholder="ABC1234"
-                disabled
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">State</label>
-              <select
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
-                disabled
-              >
-                <option value="">Select State</option>
-                {US_STATES.map(state => (
-                  <option key={state} value={state}>{state}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
-            >
-              ← Back
-            </button>
-          </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-blue-800">
+            Please verify that the vehicle information above is correct. If it's incorrect, you can go back and re-enter your VIN.
+          </p>
         </div>
-      )
-    }
-    
-    return null
+        
+        <div className="flex gap-3 pt-4">
+          <button
+            onClick={() => setCurrentStep(1)}
+            className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+          >
+            ← Back
+          </button>
+          <button
+            onClick={handleContinue}
+            className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
+          >
+            Continue →
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  const renderStep3 = () => (
+  const renderStep3 = () => {
+    const handlePurchaseDateSubmit = () => {
+      if (!vehicleData.purchaseDate) {
+        setError('Please enter the purchase date')
+        return
+      }
+      
+      const purchaseDate = new Date(vehicleData.purchaseDate)
+      const minDate = new Date('2025-01-01')
+      const maxDate = new Date('2025-12-31')
+      
+      if (purchaseDate < minDate || purchaseDate > maxDate) {
+        setError('Purchase date must be between January 1, 2025 and December 31, 2025')
+        return
+      }
+      
+      setError('')
+      setCurrentStep(4) // Move to eligibility check
+    }
+    
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold text-ink mb-6">Enter Purchase Date</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Purchase Date *</label>
+            <input
+              type="date"
+              value={vehicleData.purchaseDate}
+              onChange={(e) => {
+                setVehicleData({ ...vehicleData, purchaseDate: e.target.value })
+                setError('')
+              }}
+              min="2025-01-01"
+              max="2025-12-31"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-ink focus:border-ink"
+            />
+            <p className="text-xs text-slate-500 mt-1">Must be between January 1, 2025 and December 31, 2025</p>
+          </div>
+        </div>
+        
+        <div className="flex gap-3 pt-4">
+          <button
+            onClick={() => setCurrentStep(2)}
+            className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+          >
+            ← Back
+          </button>
+          <button
+            onClick={handlePurchaseDateSubmit}
+            disabled={!vehicleData.purchaseDate || loading}
+            className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Continue →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const renderStep4 = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold text-ink mb-6">Eligibility Check</h2>
       
@@ -581,22 +453,28 @@ function TaxCalculator() {
         </div>
       )}
       
-      {!eligibility && (
+      {!eligibility && loading && (
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-6">
-          <p className="text-sm text-slate-600">Click "Check Eligibility" to verify your vehicle's eligibility.</p>
+          <p className="text-sm text-slate-600">Checking eligibility...</p>
+        </div>
+      )}
+      
+      {!eligibility && !loading && (
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-6">
+          <p className="text-sm text-slate-600">Checking eligibility...</p>
         </div>
       )}
       
       {eligibility && eligibility.eligible && (
         <div className="flex gap-3 pt-4">
           <button
-            onClick={() => setCurrentStep(2)}
+            onClick={() => setCurrentStep(3)}
             className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
           >
             ← Back
           </button>
           <button
-            onClick={() => setCurrentStep(4)}
+            onClick={() => setCurrentStep(5)}
             className="px-6 py-2 bg-ink text-white text-sm font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
           >
             Continue to Loan Info →
@@ -606,7 +484,7 @@ function TaxCalculator() {
     </div>
   )
 
-  const renderStep4 = () => (
+  const renderStep5 = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold text-ink mb-6">Loan Information</h2>
       
@@ -775,7 +653,7 @@ function TaxCalculator() {
       
       <div className="flex gap-3 pt-4">
         <button
-          onClick={() => setCurrentStep(3)}
+          onClick={() => setCurrentStep(4)}
           className="px-6 py-2 text-sm font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
         >
           ← Back
@@ -791,7 +669,7 @@ function TaxCalculator() {
     </div>
   )
 
-  const renderStep5 = () => {
+  const renderStep6 = () => {
     if (!calculation) return null
 
     return (
@@ -859,9 +737,10 @@ function TaxCalculator() {
         <div className="flex gap-3 pt-4">
           <button
             onClick={() => {
-              setCurrentStep(1)
+              setCurrentStep(0)
+              setIsLeased(null)
               setInputMethod(null)
-              setVehicleData({ vin: '', make: '', model: '', modelYear: '', purchaseDate: '', assembledInUSA: null })
+              setVehicleData({ vin: '', make: '', model: '', modelYear: '', purchaseDate: '', assembledInUSA: null, plantCountry: null })
               setLoanData({ purchasePrice: '', downPayment: '', loanTermMonths: '', APR: '', monthlyPayment: '', loanStartDate: '', isLease: false, personalUse: true, securedByLien: true, isUsedVehicle: false })
               setTaxData({ taxYear: new Date().getFullYear().toString(), filingStatus: 'SINGLE', MAGI: '' })
               setEligibility(null)
@@ -902,11 +781,13 @@ function TaxCalculator() {
         )}
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+          {currentStep === 0 && renderStep0()}
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
           {currentStep === 4 && renderStep4()}
           {currentStep === 5 && renderStep5()}
+          {currentStep === 6 && renderStep6()}
         </div>
       </main>
     </div>

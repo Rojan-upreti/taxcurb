@@ -3,7 +3,7 @@
  * Handles API calls for vehicle loan interest deduction calculator
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
  * Decode VIN using backend API
