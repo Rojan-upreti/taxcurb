@@ -33,7 +33,7 @@ export async function fillForm8843(formData) {
     
     // Map form data to PDF fields
     // Based on Form 8843 structure and the field names we discovered
-    const fieldMappings = getFieldMappings(formData);
+    const fieldMappings = await getFieldMappings(formData);
     
     let filledCount = 0;
     let errorCount = 0;
@@ -84,7 +84,7 @@ export async function fillForm8843(formData) {
  * Map form data to PDF field names
  * Updated mapping according to new specifications
  */
-function getFieldMappings(formData) {
+async function getFieldMappings(formData) {
   const mappings = {};
   
   // ========== DEFAULT TAX YEAR FIELDS ==========
@@ -238,8 +238,13 @@ function getFieldMappings(formData) {
     };
     
     for (const [year, fieldName] of Object.entries(yearMapping)) {
-      if (formData.visaHistory[year]) {
-        mappings[fieldName] = formData.visaHistory[year];
+      const yearValue = formData.visaHistory[year];
+      
+      if (yearValue) {
+        // Extract single character from visa status (e.g., "F-1" -> "F", "M-1" -> "M")
+        // PDF fields only accept 1 character
+        const singleChar = extractVisaTypeChar(yearValue);
+        mappings[fieldName] = singleChar;
       }
     }
   }
@@ -253,35 +258,13 @@ function getFieldMappings(formData) {
 
 /**
  * Fill checkboxes in the form
- * Form 8843 has 6 checkboxes: c1_1[0], c1_1[1], c1_2[0], c1_2[1], c1_3[0], c1_3[1]
+ * Form 8843 checkboxes: c1_2[0], c1_2[1], c1_3[0], c1_3[1]
  * @returns {number} Number of checkboxes successfully filled
  */
 function fillCheckboxes(form, formData) {
   let filledCount = 0;
   
   try {
-    // c1_1 checkboxes - typically for a Yes/No question (e.g., "Were you present in the US?")
-    // c1_1[0] = Yes, c1_1[1] = No
-    if (formData.usPresence === 'yes') {
-      try {
-        const checkbox = form.getCheckBox('topmostSubform[0].Page1[0].c1_1[0]');
-        checkbox.check();
-        filledCount++;
-        console.log('  ✓ Checked: c1_1[0] (US Presence: Yes)');
-      } catch (e) {
-        console.warn('  ⚠️  Could not check c1_1[0]:', e.message);
-      }
-    } else if (formData.usPresence === 'no') {
-      try {
-        const checkbox = form.getCheckBox('topmostSubform[0].Page1[0].c1_1[1]');
-        checkbox.check();
-        filledCount++;
-        console.log('  ✓ Checked: c1_1[1] (US Presence: No)');
-      } catch (e) {
-        console.warn('  ⚠️  Could not check c1_1[1]:', e.message);
-      }
-    }
-    
     // c1_2 checkboxes - Exempt 5 years check
     // Logic: If dateEnteredUS is more than 5 years ago → Yes (c1_2[0])
     //        If 5 years or less ago → No (c1_2[1])
@@ -421,6 +404,29 @@ function calculateExcludePresence(daysInUS2025) {
   const days = parseInt(daysInUS2025) || 0;
   const exclude = 365 - days;
   return Math.max(0, exclude);
+}
+
+/**
+ * Extract single character from visa status for PDF fields
+ * PDF fields only accept 1 character, so "F-1" -> "F", "M-1" -> "M", etc.
+ * Handles: "F-1" -> "F", "M-1" -> "M", "J-1" -> "J", "F1" -> "F", "F" -> "F"
+ * For "Not in U.S." or empty values, returns empty string
+ */
+function extractVisaTypeChar(visaStatus) {
+  if (!visaStatus) return '';
+  const statusStr = String(visaStatus).trim();
+  if (!statusStr) return '';
+  
+  // Handle "Not in U.S." or similar - return empty
+  if (statusStr.toLowerCase().includes('not in')) return '';
+  
+  // Extract first character and uppercase it (e.g., "F-1" -> "F", "M-1" -> "M", "F1" -> "F")
+  const firstChar = statusStr.charAt(0).toUpperCase();
+  // Only return if it's a letter (A-Z)
+  if (/[A-Z]/.test(firstChar)) {
+    return firstChar;
+  }
+  return '';
 }
 
 /**

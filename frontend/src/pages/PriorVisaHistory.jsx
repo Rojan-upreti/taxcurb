@@ -125,14 +125,15 @@ function PriorVisaHistory() {
         }
       })
       setVisaHistory(autoFilledHistory)
-    } else if (hasChangedStatus === 'yes') {
-      // Reset to empty if they changed their answer
+    } else if (hasChangedStatus === 'yes' && yearsToShow.length > 0) {
+      // Reset to empty if they selected Yes (allow manual selection)
       const resetHistory = {}
       yearsToShow.forEach(year => {
         resetHistory[year] = ''
       })
       setVisaHistory(resetHistory)
     }
+    // When hasChangedStatus is null, keep visaHistory as is (empty or from cache)
   }, [hasChangedStatus, entryYear, yearsToShow])
 
   const handleContinue = () => {
@@ -151,7 +152,9 @@ function PriorVisaHistory() {
 
   const allFieldsCompleted = 
     hasChangedStatus !== null &&
-    (hasChangedStatus === 'no' || (hasChangedStatus === 'yes' && Object.values(visaHistory).every(value => value !== '')))
+    (hasChangedStatus === 'no' 
+      ? yearsToShow.length > 0 && yearsToShow.every(year => visaHistory[year] && visaHistory[year] !== '')
+      : hasChangedStatus === 'yes' && Object.values(visaHistory).every(value => value !== ''))
 
   const completedPages = allFieldsCompleted 
     ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history']
@@ -188,62 +191,45 @@ function PriorVisaHistory() {
                     setTimeout(saveToCache, 100)
                   }} 
                 />
-                {hasChangedStatus === 'no' && (
-                  <p className="text-xs text-slate-600 mt-3">
-                    All years from your entry date onwards will be set to F-1.
-                  </p>
-                )}
               </QuestionCard>
 
-              {/* Visa History - Only show if they selected Yes */}
-              {hasChangedStatus === 'yes' && (
-                <QuestionCard>
-                  <h3 className="text-sm font-semibold text-ink mb-4">Visa Type for Each Year</h3>
-                  <p className="text-xs text-slate-600 mb-4">
-                    IRS requires visa history from 2019 onwards. Years shown are based on your entry date.
-                  </p>
-                  <div className="space-y-3">
-                    {yearsToShow.map((year) => (
-                      <div key={year}>
-                        <label className="block text-xs font-semibold text-ink mb-2">
-                          {year} *
-                        </label>
-                        <select
-                          value={visaHistory[year] || ''}
-                          onChange={(e) => {
-                            handleVisaTypeChange(year, e.target.value)
-                            setTimeout(saveToCache, 100)
-                          }}
-                          onBlur={saveToCache}
-                          className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
-                        >
-                          <option value="">Select visa type</option>
-                          {visaTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                </QuestionCard>
-              )}
-
-              {/* Show auto-filled summary if no status change */}
-              {hasChangedStatus === 'no' && (
-                <QuestionCard>
-                  <h3 className="text-sm font-semibold text-ink mb-3">Visa History Summary</h3>
-                  <div className="space-y-2">
-                    {yearsToShow.map((year) => (
-                      <div key={year} className="flex justify-between items-center py-2 border-b border-slate-200 last:border-0">
-                        <span className="text-xs font-medium text-ink">{year}</span>
-                        <span className="text-xs text-slate-600">{visaHistory[year] || 'Not set'}</span>
-                      </div>
-                    ))}
-                  </div>
-                </QuestionCard>
-              )}
+              {/* Visa History - Always visible */}
+              <QuestionCard>
+                <h3 className="text-sm font-semibold text-ink mb-4">Visa Type for Each Year</h3>
+                <p className="text-xs text-slate-600 mb-4">
+                  IRS requires visa history from 2019 onwards. Years shown are based on your entry date.
+                </p>
+                <div className="space-y-3">
+                  {yearsToShow.map((year) => (
+                    <div key={year}>
+                      <label className="block text-xs font-semibold text-ink mb-2">
+                        {year} *
+                      </label>
+                      <select
+                        value={visaHistory[year] || ''}
+                        onChange={(e) => {
+                          handleVisaTypeChange(year, e.target.value)
+                          setTimeout(saveToCache, 100)
+                        }}
+                        onBlur={saveToCache}
+                        disabled={hasChangedStatus === 'no' || hasChangedStatus === null}
+                        className={`w-full px-4 py-2 text-sm border-2 rounded-full font-medium focus:outline-none ${
+                          hasChangedStatus === 'no' || hasChangedStatus === null
+                            ? 'border-slate-300 bg-stone-50 text-ink cursor-not-allowed'
+                            : 'border-slate-300 bg-white text-ink focus:border-ink'
+                        }`}
+                      >
+                        <option value="">Select visa type</option>
+                        {visaTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </QuestionCard>
 
               {/* Navigation Buttons */}
               <div className="flex justify-between gap-3 pt-2">
