@@ -21,6 +21,7 @@ import About from './pages/About'
 import Tutorial from './pages/Tutorial'
 import TaxCalculator from './pages/TaxCalculator'
 import TaxTool from './pages/TaxTool'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
@@ -136,6 +137,7 @@ function App() {
             path="/tax-tool/car-interest-deduction-calculator" 
             element={<TaxCalculator />} 
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
