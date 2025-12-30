@@ -41,7 +41,7 @@ function Footer() {
               </li>
               <li>
                 <Link to="/tax-tool" className="text-sm text-slate-600 hover:text-ink transition-colors">
-                  Tax Calculator
+                  Tax Tools
                 </Link>
               </li>
             </ul>
