@@ -175,11 +175,11 @@ function Review() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium text-slate-600">Were you a U.S. citizen on the last day of 2024?</span>
+                      <span className="font-medium text-slate-600">Were you a U.S. citizen on the last day of 2025?</span>
                       <p className="text-ink">{residencyData.usCitizen === 'yes' ? 'Yes' : residencyData.usCitizen === 'no' ? 'No' : 'N/A'}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600">Did you hold a green card at any time in 2024?</span>
+                      <span className="font-medium text-slate-600">Did you hold a green card at any time in 2025?</span>
                       <p className="text-ink">{residencyData.greenCardHolder === 'yes' ? 'Yes' : residencyData.greenCardHolder === 'no' ? 'No' : 'N/A'}</p>
                     </div>
                   </div>

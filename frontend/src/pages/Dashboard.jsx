@@ -16,7 +16,7 @@ function Dashboard() {
   useEffect(() => {
     if (currentUser) {
       // Get onboarding data to determine tax year and other info
-      const taxYear = '2024' // Default, could be from onboarding
+      const taxYear = '2025' // Default, could be from onboarding
       const saved = getOnboardingData(currentUser.uid, taxYear)
       
       if (saved) {
@@ -45,7 +45,7 @@ function Dashboard() {
         // If no onboarding data, use default calculations with mock data
         const mockIncome = getMockIncomeData()
         const calculated = calculateTax({
-          taxYear: '2024',
+          taxYear: '2025',
           filingStatus: 'Single',
           income: {
             w2Income: mockIncome.w2Income,
