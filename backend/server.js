@@ -8,7 +8,7 @@ import { getAuth } from 'firebase-admin/auth';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 
 // Security middleware - set security headers
