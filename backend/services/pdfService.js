@@ -43,22 +43,73 @@ export async function fillForm8843(formData) {
       if (!value && value !== 0 && value !== false) continue; // Skip empty values (but allow 0 and false)
       
       try {
-        const field = form.getTextField(fieldName);
+        // Try to get the field - it might be a text field, dropdown, or other type
+        let field = null;
+        let fieldType = 'unknown';
+        
+        // Try text field first
+        try {
+          field = form.getTextField(fieldName);
+          fieldType = 'text';
+        } catch (e) {
+          // Not a text field, try dropdown/choice field
+          try {
+            field = form.getDropdown(fieldName);
+            fieldType = 'dropdown';
+          } catch (e2) {
+            // Not a dropdown either, try option list
+            try {
+              field = form.getOptionList(fieldName);
+              fieldType = 'optionlist';
+            } catch (e3) {
+              // Field doesn't exist or is a different type
+              errorCount++;
+              errorFields.push({ fieldName, error: 'Field not found or unsupported type' });
+              console.warn(`  ⚠️  Field not found or unsupported: ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}`);
+              continue;
+            }
+          }
+        }
+        
+        // Set the value based on field type
         if (field) {
-          field.setText(String(value));
+          if (fieldType === 'text') {
+            field.setText(String(value));
+          } else if (fieldType === 'dropdown' || fieldType === 'optionlist') {
+            // For dropdowns, try to select the option
+            try {
+              field.select(String(value));
+            } catch (e) {
+              // If selection fails, try setting as text (some dropdowns allow this)
+              try {
+                if (field.setText) {
+                  field.setText(String(value));
+                } else {
+                  throw new Error('Cannot set dropdown value');
+                }
+              } catch (e2) {
+                throw e;
+              }
+            }
+          }
+          
           filledCount++;
-          console.log(`  ✓ ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}: ${value}`);
+          console.log(`  ✓ ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}: ${value} (${fieldType})`);
         }
       } catch (e) {
-        // Field might not exist or be a different type
+        // Field exists but setting value failed
         errorCount++;
-        errorFields.push(fieldName);
-        // Don't log every error to avoid spam, just track them
+        errorFields.push({ fieldName, error: e.message });
+        console.warn(`  ⚠️  Failed to fill ${fieldName.substring(fieldName.lastIndexOf('.') + 1)}: ${e.message}`);
       }
     }
     
     if (errorFields.length > 0) {
-      console.warn(`  ⚠️  ${errorFields.length} fields could not be filled (may not exist in PDF)`);
+      console.warn(`  ⚠️  ${errorFields.length} fields could not be filled:`);
+      errorFields.forEach(({ fieldName, error }) => {
+        const shortName = fieldName.substring(fieldName.lastIndexOf('.') + 1);
+        console.warn(`    - ${shortName}: ${error}`);
+      });
     }
     
     // Handle checkboxes
@@ -86,6 +137,17 @@ export async function fillForm8843(formData) {
  */
 async function getFieldMappings(formData) {
   const mappings = {};
+  
+  console.log('\n=== Building Field Mappings ===');
+  console.log('Form data keys:', Object.keys(formData));
+  console.log('Has firstName:', !!formData.firstName);
+  console.log('Has lastName:', !!formData.lastName);
+  console.log('Has ssn:', !!formData.ssn);
+  console.log('Has passports:', Array.isArray(formData.passports) ? formData.passports.length : 'not array');
+  console.log('Has visaHistory:', !!formData.visaHistory);
+  console.log('Has daysInUS2025:', formData.daysInUS2025);
+  console.log('Has daysInUS2024:', formData.daysInUS2024);
+  console.log('Has daysInUS2023:', formData.daysInUS2023);
   
   // ========== DEFAULT TAX YEAR FIELDS ==========
   mappings['topmostSubform[0].Page1[0].f1_01[0]'] = '01/01';
@@ -228,6 +290,7 @@ async function getFieldMappings(formData) {
   // ========== VISA HISTORY BY YEAR ==========
   // f1_28 to f1_33: Visa held for each year (2019-2024)
   if (formData.visaHistory && typeof formData.visaHistory === 'object') {
+    console.log('Processing visaHistory:', formData.visaHistory);
     const yearMapping = {
       '2019': 'topmostSubform[0].Page1[0].f1_28[0]',
       '2020': 'topmostSubform[0].Page1[0].f1_29[0]',
@@ -240,18 +303,30 @@ async function getFieldMappings(formData) {
     for (const [year, fieldName] of Object.entries(yearMapping)) {
       const yearValue = formData.visaHistory[year];
       
-      if (yearValue) {
+      if (yearValue && String(yearValue).trim() !== '') {
         // Extract single character from visa status (e.g., "F-1" -> "F", "M-1" -> "M")
         // PDF fields only accept 1 character
         const singleChar = extractVisaTypeChar(yearValue);
-        mappings[fieldName] = singleChar;
+        if (singleChar) {
+          mappings[fieldName] = singleChar;
+          console.log(`  Mapped visa history ${year}: "${yearValue}" -> "${singleChar}"`);
+        } else {
+          console.log(`  Skipped visa history ${year}: "${yearValue}" (no valid char extracted)`);
+        }
+      } else {
+        console.log(`  No visa history for year ${year}`);
       }
     }
+  } else {
+    console.log('No visaHistory data found or invalid format');
   }
   
   // ========== APPLIED FOR PR EXPLANATION ==========
   // f1_34: Explain applied for PR (auto-filled with empty string)
   mappings['topmostSubform[0].Page1[0].f1_34[0]'] = '';
+  
+  console.log(`\nTotal mappings created: ${Object.keys(mappings).length}`);
+  console.log('Mapped fields:', Object.keys(mappings).map(k => k.substring(k.lastIndexOf('.') + 1)).join(', '));
   
   return mappings;
 }

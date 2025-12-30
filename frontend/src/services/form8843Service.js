@@ -2,7 +2,7 @@
  * Service for Form 8843 PDF generation
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
  * Collect all form data from localStorage
@@ -16,14 +16,16 @@ export const collectFormData = (userId, taxYear) => {
     // Get filing data from various steps
     const profileData = JSON.parse(localStorage.getItem('filing_profile') || '{}');
     const visaData = JSON.parse(localStorage.getItem('filing_visa_status') || '{}');
+    const incomeData = JSON.parse(localStorage.getItem('filing_income') || '{}');
     const identityData = JSON.parse(localStorage.getItem('filing_identity_travel') || '{}');
     const programData = JSON.parse(localStorage.getItem('filing_program_presence') || '{}');
+    const priorVisaData = JSON.parse(localStorage.getItem('filing_prior_visa_history') || '{}');
     const addressData = JSON.parse(localStorage.getItem('filing_address') || '{}');
     
     // Combine all data
     const formData = {
       // From onboarding
-      taxYear: onboardingData.taxYear || onboardingData.answers?.taxYear || taxYear || '2024',
+      taxYear: onboardingData.taxYear || onboardingData.answers?.taxYear || taxYear || '2025',
       usPresence: onboardingData.answers?.usPresence || onboardingData.usPresence,
       
       // From profile
@@ -32,6 +34,7 @@ export const collectFormData = (userId, taxYear) => {
       lastName: profileData.lastName,
       dateOfBirth: profileData.dateOfBirth,
       countryOfCitizenship: profileData.countryOfCitizenship,
+      otherCitizenships: profileData.otherCitizenships || [],
       
       // From visa status
       visaType: visaData.visaStatus,
@@ -40,13 +43,23 @@ export const collectFormData = (userId, taxYear) => {
       programStartDate: visaData.programStartDate,
       programEndDate: visaData.programEndDate,
       
-      // From identity/travel
-      ssn: identityData.ssn || '',
-      hasSSN: identityData.hasSSN,
+      // From income (SSN moved here)
+      ssn: incomeData.ssn || '',
+      hasSSN: incomeData.hasSSN,
+      
+      // From identity/travel (passports)
+      passports: identityData.passports || [],
+      
+      // From prior visa history
+      visaHistory: priorVisaData.visaHistory || {},
+      hasChangedStatus: priorVisaData.hasChangedStatus,
       
       // From program/presence
-      daysInUS: programData.daysInUS2024 || programData.daysInUS || programData.daysInUSCalculated,
-      daysInUSCalculated: programData.daysInUS2024 || programData.daysInUS || programData.daysInUSCalculated,
+      daysInUS: programData.daysInUS2025 || programData.daysInUS2024 || programData.daysInUS || programData.daysInUSCalculated,
+      daysInUSCalculated: programData.daysInUS2025 || programData.daysInUS2024 || programData.daysInUS || programData.daysInUSCalculated,
+      daysInUS2023: programData.daysInUS2023,
+      daysInUS2024: programData.daysInUS2024,
+      daysInUS2025: programData.daysInUS2025,
       institutionName: programData.institutionName,
       institutionStreet1: programData.institutionStreet1,
       institutionStreet2: programData.institutionStreet2,
@@ -58,13 +71,8 @@ export const collectFormData = (userId, taxYear) => {
       dsoEmail: programData.dsoEmail,
       dsoPhone: programData.dsoPhone,
       
-      // For checkbox fields
-      hasSSN: identityData.hasSSN,
-      
-      // Page 2 fields (if needed - these can be populated from additional data)
-      // part2Info1 through part2Info8 can be added if you collect this data
-      
       // From address
+      countryOfResidence: addressData.countryOfResidence,
       foreignAddressStreet1: addressData.countryOfResidence?.street1 || addressData.residenceStreet1,
       foreignAddressStreet2: addressData.countryOfResidence?.street2 || addressData.residenceStreet2,
       foreignAddressCity: addressData.countryOfResidence?.city || addressData.residenceCity,
@@ -77,6 +85,18 @@ export const collectFormData = (userId, taxYear) => {
       usAddressCity: addressData.unitedStates?.city || addressData.usCity,
       usAddressState: addressData.unitedStates?.state || addressData.usState,
       usAddressZip: addressData.unitedStates?.zip || addressData.usZip,
+      
+      // Address field aliases for compatibility
+      residenceStreet1: addressData.residenceStreet1,
+      residenceStreet2: addressData.residenceStreet2,
+      residenceCity: addressData.residenceCity,
+      residenceState: addressData.residenceState,
+      residenceZip: addressData.residenceZip,
+      usStreet1: addressData.usStreet1,
+      usStreet2: addressData.usStreet2,
+      usCity: addressData.usCity,
+      usState: addressData.usState,
+      usZip: addressData.usZip,
     };
     
     console.log('Collected form data:', formData);
@@ -131,7 +151,7 @@ export const generateForm8843 = async (formData) => {
     
     // Provide user-friendly error messages
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      throw new Error('Cannot connect to server. Please make sure the backend is running on port 5000.');
+      throw new Error('Cannot connect to server. Please make sure the backend is running on port 3001.');
     }
     
     throw error;
