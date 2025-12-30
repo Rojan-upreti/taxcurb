@@ -1,12 +1,10 @@
 import React from 'react'
-import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
 
 function About() {
   return (
-    <div className="min-h-screen bg-stone-50">
-      <Navbar />
-
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-16">
+    <Layout>
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-16">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-semibold text-ink mb-6">About TaxCurb</h1>
           <div className="space-y-8 text-slate-700 leading-relaxed text-lg">
@@ -25,8 +23,8 @@ function About() {
             </p>
           </div>
         </div>
-      </main>
     </div>
+    </Layout>
   )
 }
 

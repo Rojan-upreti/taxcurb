@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
 import { getOnboardingData } from '../services/onboardingService'
 import { calculateTax, getMockIncomeData } from '../services/taxCalculationService'
 
@@ -100,10 +100,8 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <Navbar />
-
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-16">
+    <Layout>
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-16">
         <div className="mb-12">
           <h1 className="text-4xl md:text-5xl font-semibold text-ink mb-2">Dashboard</h1>
           <p className="text-xl text-slate-700">
@@ -268,8 +266,8 @@ function Dashboard() {
             Start Filing
           </button>
         </div>
-      </main>
     </div>
+    </Layout>
   )
 }
 

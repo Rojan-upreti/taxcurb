@@ -1,13 +1,11 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import Navbar from './components/Navbar'
+import Layout from './components/Layout'
 
 function LandingPage() {
   return (
-    <div className="min-h-screen bg-stone-50">
-      <Navbar />
-
-      <main>
+    <Layout>
+      <div>
           <section className="min-h-screen flex items-center border-b border-slate-300">
             <div className="max-w-6xl mx-auto px-4 md:px-8 w-full">
               <div className="max-w-4xl">
@@ -200,27 +198,9 @@ function LandingPage() {
                 </div>
               </div>
             </div>
-            <footer className="w-full py-12 border-t border-slate-300 bg-slate-100">
-              <div className="max-w-6xl mx-auto px-4 md:px-8">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-                <div className="text-sm text-slate-600">
-                  <p className="mb-2 font-medium text-ink">TaxCurb</p>
-                  <p className="text-xs text-slate-500">Built with IRS rules for non-resident aliens in mind.</p>
-                </div>
-                <nav className="flex flex-wrap gap-6 text-sm">
-                  <Link to="/" className="text-slate-700 hover:text-ink">Home</Link>
-                  <Link to="/about" className="text-slate-700 hover:text-ink">About</Link>
-                  <Link to="/tutorial" className="text-slate-700 hover:text-ink">Tutorial</Link>
-                  <Link to="/check" className="text-slate-700 hover:text-ink">Check if you need to file</Link>
-                  <Link to="/auth#signup" className="text-slate-700 hover:text-ink">Start filing</Link>
-                </nav>
-                </div>
-              </div>
-            </footer>
           </section>
-
-      </main>
-    </div>
+      </div>
+    </Layout>
   )
 }
 

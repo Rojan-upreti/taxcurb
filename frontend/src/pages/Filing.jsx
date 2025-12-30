@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
 
 function Filing() {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
@@ -52,10 +52,8 @@ function Filing() {
   ]
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <Navbar />
-      
-      <main className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+    <Layout>
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         <div className="text-center mb-6">
           <h1 className="text-3xl md:text-4xl font-semibold text-ink mb-2">Tax Filing</h1>
           <p className="text-lg text-slate-700">
@@ -151,8 +149,8 @@ function Filing() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   )
 }
 

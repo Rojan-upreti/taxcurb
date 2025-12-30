@@ -1,12 +1,10 @@
 import React from 'react'
-import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
 
 function Tutorial() {
   return (
-    <div className="min-h-screen bg-stone-50">
-      <Navbar />
-
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-16">
+    <Layout>
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-16">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-semibold text-ink mb-6">Tutorial</h1>
           <p className="text-xl text-slate-700 mb-12">Learn how to file your taxes with TaxCurb.</p>
@@ -51,8 +49,8 @@ function Tutorial() {
             </section>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   )
 }
 
