@@ -23,6 +23,7 @@ function Income() {
   const [hasIncome, setHasIncome] = useState(null)
   const [hasSSN, setHasSSN] = useState(null)
   const [ssn, setSSN] = useState('')
+  const [hasCPTOPT, setHasCPTOPT] = useState(null)
   const hasLoadedFromCache = useRef(false)
 
   // New state for income document collection
@@ -93,6 +94,7 @@ function Income() {
           hasIncome,
           hasSSN: hasIncome === 'no' ? hasSSN : null,
           ssn: hasIncome === 'no' && hasSSN === 'yes' && ssn.length === 11 ? ssn : '',
+          hasCPTOPT: hasIncome === 'yes' ? hasCPTOPT : null,
           // Add income document data if hasIncome is 'yes'
           ...(hasIncome === 'yes' && {
             documentCount,
@@ -124,6 +126,7 @@ function Income() {
           setHasSSN(data.hasSSN ?? null)
           setSSN(data.ssn || '')
         } else if (data.hasIncome === 'yes') {
+          setHasCPTOPT(data.hasCPTOPT ?? null)
           setDocumentCount(data.documentCount ?? null)
           setDocumentTypes(data.documentTypes || [])
           setIncomeDocuments(data.incomeDocuments || [])
@@ -161,7 +164,7 @@ function Income() {
   useEffect(() => {
     if (!hasLoadedFromCache.current) return
     saveToCache()
-  }, [hasIncome, hasSSN, ssn, documentCount, documentTypes, incomeDocuments, currentDocumentIndex])
+  }, [hasIncome, hasSSN, ssn, hasCPTOPT, documentCount, documentTypes, incomeDocuments, currentDocumentIndex])
 
   const handleSSNChange = (value) => {
     const sanitized = value.replace(/[^\d-]/g, '')
@@ -468,8 +471,39 @@ function Income() {
                 </>
               )}
 
-              {/* Document Count Selection - Show when user selects Yes for income */}
-              {hasIncome === 'yes' && currentDocumentIndex === null && (
+              {/* CPT/OPT Question - Show when user selects Yes for income */}
+              {hasIncome === 'yes' && currentDocumentIndex === null && (!visaData || wasInUSAIn2025()) && (
+                <QuestionCard>
+                  <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
+                    If You Participated in CPT/OPT ( Yes only, if it was paid)
+                  </h2>
+                  <YesNoButtons 
+                    value={hasCPTOPT} 
+                    onChange={(value) => {
+                      setHasCPTOPT(value)
+                      setTimeout(saveToCache, 100)
+                    }} 
+                  />
+                </QuestionCard>
+              )}
+
+              {/* Back Button - Show when user selects Yes for income but hasn't answered CPT/OPT */}
+              {hasIncome === 'yes' && hasCPTOPT === null && currentDocumentIndex === null && (!visaData || wasInUSAIn2025()) && (
+                <div className="flex justify-between gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setHasIncome(null)
+                      setHasCPTOPT(null)
+                    }}
+                    className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+                  >
+                    ← Back
+                  </button>
+                </div>
+              )}
+
+              {/* Document Count Selection - Show when user selects Yes for income and has answered CPT/OPT */}
+              {hasIncome === 'yes' && hasCPTOPT !== null && currentDocumentIndex === null && (
                 <QuestionCard>
                   <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
                     How many kinds of income documents do you have?
@@ -524,6 +558,7 @@ function Income() {
                     <button
                       onClick={() => {
                         setHasIncome(null)
+                        setHasCPTOPT(null)
                         setDocumentCount(null)
                         setDocumentTypes([])
                       }}
