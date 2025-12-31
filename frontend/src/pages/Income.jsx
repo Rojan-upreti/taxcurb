@@ -113,6 +113,7 @@ function Income() {
   // Load cached data on mount and whenever location changes
   useEffect(() => {
     hasLoadedFromCache.current = false
+    setValidationError(null) // Clear any validation errors when loading
     try {
       const cached = localStorage.getItem('filing_income')
       if (cached) {
@@ -142,6 +143,18 @@ function Income() {
       }, 0)
     }
   }, [location.pathname])
+  
+  // Clear validation error when document index changes
+  useEffect(() => {
+    setValidationError(null)
+  }, [currentDocumentIndex])
+  
+  // Clear validation error immediately when form becomes valid
+  useEffect(() => {
+    if (isCurrentFormValid && validationError) {
+      setValidationError(null)
+    }
+  }, [isCurrentFormValid])
 
   // Save to cache whenever form data changes
   useEffect(() => {
