@@ -25,7 +25,6 @@ function Navbar() {
             <div className="hidden md:flex items-center gap-6">
               <Link to="/" className="text-sm text-slate-700 hover:text-ink">Home</Link>
               <Link to="/about" className="text-sm text-slate-700 hover:text-ink">About</Link>
-              <Link to="/tutorial" className="text-sm text-slate-700 hover:text-ink">Tutorial</Link>
               <Link to="/tax-tool" className="text-sm text-slate-700 hover:text-ink">Tax Tools</Link>
             </div>
             {currentUser ? (

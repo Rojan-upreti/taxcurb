@@ -5,6 +5,15 @@ import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
 import logger from '../utils/logger'
 import FilingProgress from '../components/FilingProgress'
+import W2Form from '../components/incomeForms/W2Form'
+import Form1042S from '../components/incomeForms/Form1042S'
+import Form1099B from '../components/incomeForms/Form1099B'
+import Form1099DIV from '../components/incomeForms/Form1099DIV'
+import Form1099G from '../components/incomeForms/Form1099G'
+import Form1099INT from '../components/incomeForms/Form1099INT'
+import Form1099MISC from '../components/incomeForms/Form1099MISC'
+import Form1099R from '../components/incomeForms/Form1099R'
+import Form1099NEC from '../components/incomeForms/Form1099NEC'
 
 function Income() {
   const navigate = useNavigate()
@@ -15,7 +24,17 @@ function Income() {
   const [ssn, setSSN] = useState('')
   const hasLoadedFromCache = useRef(false)
 
-  // Load visa status data from localStorage (or context in future)
+  // New state for income document collection
+  const [documentCount, setDocumentCount] = useState(null)
+  const [documentTypes, setDocumentTypes] = useState([])
+  const [currentDocumentIndex, setCurrentDocumentIndex] = useState(null)
+  const [incomeDocuments, setIncomeDocuments] = useState([])
+  const [currentFormData, setCurrentFormData] = useState({})
+  const [isCurrentFormValid, setIsCurrentFormValid] = useState(false)
+  const [validationError, setValidationError] = useState(null)
+  const w2FormRef = useRef(null)
+
+  // Load visa status data from localStorage
   const [visaData, setVisaData] = useState(null)
 
   useEffect(() => {
@@ -65,8 +84,6 @@ function Income() {
     return entryDate >= yearStart && entryDate <= yearEnd
   }
 
-
-
   // Save function to ensure data is saved
   const saveToCache = () => {
     if (hasIncome !== null) {
@@ -74,13 +91,18 @@ function Income() {
         const incomeData = {
           hasIncome,
           hasSSN: hasIncome === 'no' ? hasSSN : null,
-          // Only save SSN if user has one and it's properly formatted
-          ssn: hasIncome === 'no' && hasSSN === 'yes' && ssn.length === 11 ? ssn : ''
+          ssn: hasIncome === 'no' && hasSSN === 'yes' && ssn.length === 11 ? ssn : '',
+          // Add income document data if hasIncome is 'yes'
+          ...(hasIncome === 'yes' && {
+            documentCount,
+            documentTypes,
+            incomeDocuments,
+            currentDocumentIndex
+          })
         }
         localStorage.setItem('filing_income', JSON.stringify(incomeData))
       } catch (e) {
         logger.error('Error saving income data to cache:', e)
-        // Handle quota exceeded error gracefully
         if (e.name === 'QuotaExceededError') {
           logger.warn('localStorage quota exceeded. Consider clearing old data.')
         }
@@ -88,7 +110,7 @@ function Income() {
     }
   }
 
-  // Load cached data on mount and whenever location changes (navigation)
+  // Load cached data on mount and whenever location changes
   useEffect(() => {
     hasLoadedFromCache.current = false
     try {
@@ -99,6 +121,15 @@ function Income() {
         if (data.hasIncome === 'no') {
           setHasSSN(data.hasSSN ?? null)
           setSSN(data.ssn || '')
+        } else if (data.hasIncome === 'yes') {
+          setDocumentCount(data.documentCount ?? null)
+          setDocumentTypes(data.documentTypes || [])
+          setIncomeDocuments(data.incomeDocuments || [])
+          setCurrentDocumentIndex(data.currentDocumentIndex ?? null)
+          // Initialize documentTypes array if documentCount is set
+          if (data.documentCount && (!data.documentTypes || data.documentTypes.length === 0)) {
+            setDocumentTypes(new Array(data.documentCount).fill(''))
+          }
         }
       }
       setTimeout(() => {
@@ -112,16 +143,14 @@ function Income() {
     }
   }, [location.pathname])
 
-  // Save to cache whenever form data changes (but not before loading from cache)
+  // Save to cache whenever form data changes
   useEffect(() => {
     if (!hasLoadedFromCache.current) return
     saveToCache()
-  }, [hasIncome, hasSSN, ssn])
+  }, [hasIncome, hasSSN, ssn, documentCount, documentTypes, incomeDocuments, currentDocumentIndex])
 
   const handleSSNChange = (value) => {
-    // Sanitize input - only allow digits and hyphens
     const sanitized = value.replace(/[^\d-]/g, '')
-    // Format SSN as XXX-XX-XXXX
     const cleaned = sanitized.replace(/\D/g, '')
     if (cleaned.length <= 9) {
       let formatted = cleaned
@@ -137,20 +166,171 @@ function Income() {
 
   const handleContinue = () => {
     if (hasIncome === 'no') {
-      // Validate SSN if user said they have one
       if (hasSSN === 'yes' && ssn.length !== 11) {
-        return // Don't proceed if SSN is required but not provided
+        return
       }
-      saveToCache() // Ensure data is saved before navigation
+      saveToCache()
       navigate('/filing/review')
+    }
+  }
+
+  const handleDocumentCountChange = (count) => {
+    const numCount = parseInt(count)
+    setDocumentCount(numCount)
+    setDocumentTypes(new Array(numCount).fill(''))
+    setIncomeDocuments(new Array(numCount).fill(null))
+  }
+
+  const handleDocumentTypeChange = (index, type) => {
+    const updated = [...documentTypes]
+    updated[index] = type
+    setDocumentTypes(updated)
+  }
+
+  const handleDocumentTypesContinue = () => {
+    // Validate all document types are selected
+    if (documentTypes.every(type => type !== '')) {
+      setCurrentDocumentIndex(0)
+      setIsCurrentFormValid(false) // Reset validation for first document
+      // Initialize incomeDocuments array
+      const initialized = new Array(documentCount).fill(null).map((_, idx) => {
+        if (incomeDocuments[idx]) {
+          return incomeDocuments[idx]
+        }
+        return { type: documentTypes[idx], data: {} }
+      })
+      setIncomeDocuments(initialized)
+      // Load current document data if exists
+      if (initialized[0] && initialized[0].data) {
+        setCurrentFormData(initialized[0].data)
+      } else {
+        setCurrentFormData({})
+      }
+    }
+  }
+
+  const handleFormDataChange = (data) => {
+    setCurrentFormData(data)
+    // Update incomeDocuments array
+    const updated = [...incomeDocuments]
+    updated[currentDocumentIndex] = {
+      type: documentTypes[currentDocumentIndex],
+      data: data
+    }
+    setIncomeDocuments(updated)
+  }
+
+  const handleFormValidationChange = (isValid) => {
+    setIsCurrentFormValid(isValid)
+    // Clear error message when form becomes valid
+    if (isValid) {
+      setValidationError(null)
+    }
+  }
+
+  const handleNextDocument = () => {
+    // Check if current form is valid
+    if (!isCurrentFormValid) {
+      // If it's a W-2 form, get missing mandatory fields
+      if (documentTypes[currentDocumentIndex] === 'W-2' && w2FormRef.current) {
+        const missingFields = w2FormRef.current.getMissingMandatoryFields()
+        if (missingFields.length > 0) {
+          setValidationError(`Please fill in the following mandatory fields:\n${missingFields.map(field => `• ${field}`).join('\n')}`)
+          return
+        }
+      } else {
+        // For other forms, show generic message
+        setValidationError('Please fill in all mandatory fields before continuing.')
+        return
+      }
+    }
+    
+    // Clear any previous error
+    setValidationError(null)
+    
+    if (currentDocumentIndex < documentCount - 1) {
+      const nextIndex = currentDocumentIndex + 1
+      setCurrentDocumentIndex(nextIndex)
+      setIsCurrentFormValid(false) // Reset validation for new document
+      setValidationError(null) // Clear any error messages
+      // Load next document data if exists
+      if (incomeDocuments[nextIndex] && incomeDocuments[nextIndex].data) {
+        setCurrentFormData(incomeDocuments[nextIndex].data)
+      } else {
+        setCurrentFormData({})
+      }
+    } else {
+      // All documents completed, navigate to review
+      saveToCache()
+      navigate('/filing/review')
+    }
+  }
+
+  const handlePreviousDocument = () => {
+    if (currentDocumentIndex > 0) {
+      const prevIndex = currentDocumentIndex - 1
+      setCurrentDocumentIndex(prevIndex)
+      setIsCurrentFormValid(false) // Reset validation for previous document
+      setValidationError(null) // Clear any error messages
+      // Load previous document data if exists
+      if (incomeDocuments[prevIndex] && incomeDocuments[prevIndex].data) {
+        setCurrentFormData(incomeDocuments[prevIndex].data)
+      } else {
+        setCurrentFormData({})
+      }
+    } else {
+      // Go back to document type selection
+      setCurrentDocumentIndex(null)
+      setCurrentFormData({})
+      setIsCurrentFormValid(false)
+    }
+  }
+
+  const renderFormComponent = () => {
+    const currentType = documentTypes[currentDocumentIndex]
+    if (!currentType) {
+      return null
+    }
+    
+    const props = {
+      data: currentFormData,
+      onChange: handleFormDataChange,
+      onValidationChange: handleFormValidationChange
+    }
+
+    switch (currentType) {
+      case 'W-2':
+        return <W2Form ref={w2FormRef} {...props} />
+      case '1042-S':
+        return <Form1042S {...props} />
+      case '1099-B':
+        return <Form1099B {...props} />
+      case '1099-DIV':
+        return <Form1099DIV {...props} />
+      case '1099-G':
+        return <Form1099G {...props} />
+      case '1099-INT':
+        return <Form1099INT {...props} />
+      case '1099-MISC':
+        return <Form1099MISC {...props} />
+      case '1099-R':
+        return <Form1099R {...props} />
+      case '1099-NEC':
+        return <Form1099NEC {...props} />
+      default:
+        return null
     }
   }
 
   const allFieldsCompleted = hasIncome === 'no' 
     ? (hasSSN !== null && (hasSSN === 'no' || (hasSSN === 'yes' && ssn.length === 11)))
-    : hasIncome === 'yes'
+    : hasIncome === 'yes' && currentDocumentIndex === null && documentCount !== null && documentTypes.every(type => type !== '')
+    ? true
+    : hasIncome === 'yes' && currentDocumentIndex !== null
+    ? isCurrentFormValid
+    : false
 
-  const completedPages = allFieldsCompleted
+  const completedPages = (hasIncome === 'no' && allFieldsCompleted) || (hasIncome === 'yes' && currentDocumentIndex !== null && currentDocumentIndex === documentCount - 1 && isCurrentFormValid)
     ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history', 'address', 'income']
     : hasIncome !== null
     ? ['profile', 'residency', 'visa_status', 'identity_travel', 'program_presence', 'prior_visa_history', 'address']
@@ -170,7 +350,9 @@ function Income() {
             <div className="text-center mb-6">
               <h1 className="text-2xl md:text-3xl font-semibold text-ink mb-1">Income</h1>
               <p className="text-sm text-slate-700">
-                Please answer questions about your U.S. income
+                {currentDocumentIndex !== null && documentTypes[currentDocumentIndex]
+                  ? `Document ${currentDocumentIndex + 1} of ${documentCount} - ${documentTypes[currentDocumentIndex]}`
+                  : 'Please answer questions about your U.S. income'}
               </p>
             </div>
 
@@ -195,8 +377,8 @@ function Income() {
                 </QuestionCard>
               )}
 
-              {/* Income Question */}
-              {(!visaData || wasInUSAIn2025()) && (
+              {/* Income Question - Show when not filling forms */}
+              {(!visaData || wasInUSAIn2025()) && currentDocumentIndex === null && (
                 <QuestionCard>
                   <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
                     Did you have ANY U.S. income in 2025?
@@ -215,6 +397,12 @@ function Income() {
                     value={hasIncome} 
                     onChange={(value) => {
                       setHasIncome(value)
+                      // Reset document-related state if changing from yes to no
+                      if (value === 'no') {
+                        setDocumentCount(null)
+                        setDocumentTypes([])
+                        setIncomeDocuments([])
+                      }
                       setTimeout(saveToCache, 100)
                     }} 
                   />
@@ -265,6 +453,113 @@ function Income() {
                 </>
               )}
 
+              {/* Document Count Selection - Show when user selects Yes for income */}
+              {hasIncome === 'yes' && currentDocumentIndex === null && (
+                <QuestionCard>
+                  <h2 className="text-sm font-semibold text-ink mb-3 leading-relaxed">
+                    How many kinds of income documents do you have?
+                  </h2>
+                  <select
+                    value={documentCount || ''}
+                    onChange={(e) => handleDocumentCountChange(e.target.value)}
+                    className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
+                  >
+                    <option value="">Select number of documents</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                      <option key={num} value={num}>{num} document{num !== 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </QuestionCard>
+              )}
+
+              {/* Document Type Selection - Show when documentCount is set but types not all selected */}
+              {hasIncome === 'yes' && documentCount !== null && currentDocumentIndex === null && (
+                <>
+                  <QuestionCard>
+                    <h2 className="text-sm font-semibold text-ink mb-4 leading-relaxed">
+                      Select the type for each document:
+                    </h2>
+                    <div className="space-y-4">
+                      {Array.from({ length: documentCount }, (_, index) => (
+                        <div key={index}>
+                          <label className="block text-xs font-semibold text-ink mb-2">
+                            Document {index + 1} Type *
+                          </label>
+                          <select
+                            value={documentTypes[index] || ''}
+                            onChange={(e) => handleDocumentTypeChange(index, e.target.value)}
+                            className="w-full px-4 py-2 text-sm border-2 border-slate-300 bg-white text-ink font-medium focus:outline-none focus:border-ink rounded-full"
+                          >
+                            <option value="">Select Document Type</option>
+                            <option value="W-2">W-2 form (s)</option>
+                            <option value="1042-S">1042-S</option>
+                            <option value="1099-B">1099-B (Broker and Barter Exchange)</option>
+                            <option value="1099-DIV">1099-DIV (Dividends and distributions)</option>
+                            <option value="1099-G">1099-G (Government Payments)</option>
+                            <option value="1099-INT">1099-INT (Interest Income)</option>
+                            <option value="1099-MISC">1099-MISC (Miscellaneous Income)</option>
+                            <option value="1099-R">1099-R (Pensions and Annuities)</option>
+                            <option value="1099-NEC">1099-NEC (Nonemployee Compensation)</option>
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </QuestionCard>
+                  <div className="flex justify-between gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setHasIncome(null)
+                        setDocumentCount(null)
+                        setDocumentTypes([])
+                      }}
+                      className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      onClick={handleDocumentTypesContinue}
+                      disabled={!documentTypes.every(type => type !== '')}
+                      className={`px-6 py-2 text-xs font-medium transition-all border-2 rounded-full ${
+                        documentTypes.every(type => type !== '')
+                          ? 'bg-ink text-white hover:bg-slate-800 border-ink cursor-pointer'
+                          : 'bg-slate-300 text-slate-500 border-slate-300 cursor-not-allowed'
+                      }`}
+                    >
+                      Continue →
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Form Display - Show when currentDocumentIndex is set */}
+              {hasIncome === 'yes' && currentDocumentIndex !== null && (
+                <>
+                  {renderFormComponent()}
+                  {/* Validation Error Message */}
+                  {validationError && (
+                    <div className="mt-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+                      <p className="text-sm font-medium text-red-800 mb-2">Please complete the following mandatory fields:</p>
+                      <pre className="text-xs text-red-700 whitespace-pre-wrap font-sans">{validationError}</pre>
+                    </div>
+                  )}
+                  {/* Continue Button - Just below the form */}
+                  <div className="flex justify-between gap-3">
+                    <button
+                      onClick={handlePreviousDocument}
+                      className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      onClick={handleNextDocument}
+                      className="px-6 py-2 text-xs font-medium transition-all border-2 rounded-full bg-ink text-white hover:bg-slate-800 border-ink cursor-pointer"
+                    >
+                      Continue →
+                    </button>
+                  </div>
+                </>
+              )}
+
               {/* No Income Path - Show continue button with back button */}
               {hasIncome === 'no' && (!visaData || wasInUSAIn2025()) && (
                 <div className="flex justify-between gap-3 pt-2">
@@ -288,17 +583,8 @@ function Income() {
                 </div>
               )}
 
-              {/* Yes Income Path - Show nothing for now */}
-              {hasIncome === 'yes' && (
-                <QuestionCard>
-                  <p className="text-sm text-slate-700 text-center py-4">
-                    Income details will be collected in a future update.
-                  </p>
-                </QuestionCard>
-              )}
-
-              {/* Navigation Buttons - Show when income is null or yes */}
-              {(hasIncome === null || hasIncome === 'yes') && (
+              {/* Navigation Buttons - Show when income is null */}
+              {hasIncome === null && (
                 <div className="flex justify-between gap-3 pt-2">
                   <button
                     onClick={() => navigate('/filing/address')}
@@ -317,4 +603,3 @@ function Income() {
 }
 
 export default Income
-
