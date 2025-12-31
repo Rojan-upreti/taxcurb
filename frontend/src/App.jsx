@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { SessionTimeoutProvider } from './contexts/SessionTimeoutContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomeRedirect from './components/HomeRedirect'
 import Dashboard from './pages/Dashboard'
@@ -27,7 +28,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <SessionTimeoutProvider>
+          <Routes>
           <Route path="/" element={<HomeRedirect />} />
           <Route 
             path="/dashboard" 
@@ -138,7 +140,8 @@ function App() {
             element={<TaxCalculator />} 
           />
           <Route path="*" element={<NotFound />} />
-        </Routes>
+          </Routes>
+        </SessionTimeoutProvider>
       </AuthProvider>
     </BrowserRouter>
   )
