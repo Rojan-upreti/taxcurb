@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { SessionTimeoutProvider } from './contexts/SessionTimeoutContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomeRedirect from './components/HomeRedirect'
+import PageTitle from './components/PageTitle'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
 import Filing from './pages/Filing'
@@ -30,6 +31,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <SessionTimeoutProvider>
+          <PageTitle />
           <Routes>
           <Route path="/" element={<HomeRedirect />} />
           <Route 
