@@ -5,6 +5,7 @@ import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
 import Form8843Preview from '../components/Form8843Preview'
 import logger from '../utils/logger'
+import Breadcrumb from '../components/Breadcrumb'
 
 function Review() {
   const navigate = useNavigate()
@@ -101,6 +102,7 @@ function Review() {
           <FilingProgress currentPage="review" completedPages={completedPages} />
 
           <main className="flex-1 max-w-4xl order-1 lg:order-2">
+            <Breadcrumb />
             <div className="text-center mb-6">
               <h1 className="text-2xl md:text-3xl font-semibold text-ink mb-1">Review Your Information</h1>
               <p className="text-sm text-slate-700">

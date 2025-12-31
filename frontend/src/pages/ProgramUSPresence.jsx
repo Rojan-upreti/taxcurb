@@ -5,6 +5,7 @@ import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
 import logger from '../utils/logger'
 import { validateEmail, validatePhone, validateZIP, formatPhone, formatZIP } from '../utils/validation'
+import Breadcrumb from '../components/Breadcrumb'
 
 function ProgramUSPresence() {
   const navigate = useNavigate()
@@ -249,6 +250,7 @@ function ProgramUSPresence() {
           <FilingProgress currentPage="program_presence" completedPages={completedPages} />
 
           <main className="flex-1 max-w-3xl order-1 lg:order-2">
+            <Breadcrumb />
             <div className="text-center mb-4">
               <h1 className="text-2xl md:text-3xl font-semibold text-ink mb-1">Program & US Presence</h1>
               <p className="text-sm text-slate-700">

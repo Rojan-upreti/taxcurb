@@ -5,6 +5,7 @@ import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
 import logger from '../utils/logger'
 import { validateZIP, formatZIP } from '../utils/validation'
+import Breadcrumb from '../components/Breadcrumb'
 
 function Address() {
   const navigate = useNavigate()
@@ -326,6 +327,7 @@ function Address() {
           <FilingProgress currentPage="address" completedPages={completedPages} />
 
           <main className="flex-1 max-w-4xl order-1 lg:order-2">
+            <Breadcrumb />
             <div className="text-center mb-3">
               <h1 className="text-xl md:text-2xl font-semibold text-ink mb-0.5">Address</h1>
               <p className="text-xs text-slate-700">

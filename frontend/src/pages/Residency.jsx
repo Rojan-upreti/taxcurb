@@ -5,6 +5,7 @@ import QuestionCard from '../components/QuestionCard'
 import YesNoButtons from '../components/YesNoButtons'
 import logger from '../utils/logger'
 import FilingProgress from '../components/FilingProgress'
+import Breadcrumb from '../components/Breadcrumb'
 
 function Residency() {
   const navigate = useNavigate()
@@ -77,6 +78,7 @@ function Residency() {
 
           {/* Main Content */}
           <main className="flex-1 max-w-2xl order-1 lg:order-2">
+            <Breadcrumb />
             <div className="text-center mb-6">
               <h1 className="text-2xl md:text-3xl font-semibold text-ink mb-1">Residency Status</h1>
               <p className="text-sm text-slate-700">
