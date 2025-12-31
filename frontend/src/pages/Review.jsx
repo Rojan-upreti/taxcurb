@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
 import FilingProgress from '../components/FilingProgress'
-import Form8843Preview from '../components/Form8843Preview'
 import logger from '../utils/logger'
 import Breadcrumb from '../components/Breadcrumb'
 
 function Review() {
   const navigate = useNavigate()
+  const { currentUser } = useAuth()
   const [profileData, setProfileData] = useState(null)
   const [residencyData, setResidencyData] = useState(null)
   const [visaData, setVisaData] = useState(null)
@@ -17,6 +18,25 @@ function Review() {
   const [visaHistoryData, setVisaHistoryData] = useState(null)
   const [addressData, setAddressData] = useState(null)
   const [incomeData, setIncomeData] = useState(null)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
+
+  // Generate unique 5-character alphanumeric ID
+  const generateUniqueId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    let result = ''
+    for (let i = 0; i < 5; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  const handleContinue = () => {
+    if (!agreedToTerms || !currentUser?.email) return
+    
+    const uniqueId = generateUniqueId()
+    const encodedEmail = encodeURIComponent(currentUser.email)
+    navigate(`/filing/${encodedEmail}/${uniqueId}/`)
+  }
 
   useEffect(() => {
     // Load all data from localStorage
@@ -471,28 +491,45 @@ function Review() {
                 </QuestionCard>
               )}
 
-              {/* Form 8843 Preview Section */}
-              <div className="mt-8 pt-8 border-t border-slate-300">
-                <Form8843Preview />
-              </div>
-
-              {/* Navigation Buttons */}
-              <div className="flex justify-between gap-3 pt-4">
-                <button
-                  onClick={() => navigate('/filing/address')}
-                  className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
-                >
-                  ← Back
-                </button>
-                <button
-                  onClick={() => {
-                    // Navigate to submission/confirmation page when ready
-                    logger.info('Submit for review')
-                  }}
-                  className="px-6 py-2 bg-ink text-white text-xs font-medium hover:bg-slate-800 transition-colors border-2 border-ink rounded-full"
-                >
-                  Submit for Review →
-                </button>
+              {/* Agreement Checkbox and Navigation */}
+              <div className="pt-4 space-y-4">
+                <div className="bg-stone-50 border border-slate-200 p-4 rounded-lg">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        className="w-4 h-4 text-ink border-slate-300 rounded focus:ring-ink focus:ring-2 cursor-pointer"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm text-slate-700 font-medium group-hover:text-ink transition-colors">
+                        I agree all information are correct and I will be liable for aftermath
+                      </span>
+                    </div>
+                  </label>
+                </div>
+                
+                <div className="flex justify-between gap-3">
+                  <button
+                    onClick={() => navigate('/filing/address')}
+                    className="px-5 py-2 text-xs font-medium text-slate-600 hover:text-ink border-2 border-slate-300 hover:border-ink transition-all rounded-full"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={handleContinue}
+                    disabled={!agreedToTerms}
+                    className={`px-6 py-2 text-xs font-medium transition-all border-2 rounded-full ${
+                      agreedToTerms
+                        ? 'bg-ink text-white hover:bg-slate-800 border-ink cursor-pointer'
+                        : 'bg-slate-300 text-slate-500 border-slate-300 cursor-not-allowed'
+                    }`}
+                  >
+                    Continue →
+                  </button>
+                </div>
               </div>
             </div>
           </main>

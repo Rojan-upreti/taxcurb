@@ -16,6 +16,7 @@ import ProgramUSPresence from './pages/ProgramUSPresence'
 import PriorVisaHistory from './pages/PriorVisaHistory'
 import Address from './pages/Address'
 import Review from './pages/Review'
+import Form8843Generated from './pages/Form8843Generated'
 import ResetPassword from './pages/ResetPassword'
 import Auth from './pages/Auth'
 import About from './pages/About'
@@ -124,6 +125,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Review />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/:userEmail/:uniqueId" 
+            element={
+              <ProtectedRoute>
+                <Form8843Generated />
               </ProtectedRoute>
             } 
           />
