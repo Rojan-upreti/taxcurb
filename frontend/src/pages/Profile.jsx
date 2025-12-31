@@ -347,7 +347,9 @@ function Profile() {
               </p>
             </div>
 
-            <div className="space-y-4">
+            {/* Form Area with Rounded Square Border */}
+            <div className="border-2 border-slate-300 rounded-xl p-6 bg-white">
+              <div className="space-y-4">
               {/* First Name and Middle Name */}
               <QuestionCard>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -547,6 +549,7 @@ function Profile() {
                 >
                   Continue →
                 </button>
+              </div>
               </div>
             </div>
           </main>

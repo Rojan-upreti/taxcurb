@@ -374,7 +374,9 @@ function Income() {
               </p>
             </div>
 
-            <div className="space-y-4">
+            {/* Form Area with Rounded Square Border */}
+            <div className="border-2 border-slate-300 rounded-xl p-6 bg-white">
+              <div className="space-y-4">
               {/* Check if person was in USA in 2025 */}
               {visaData && !wasInUSAIn2025() && (
                 <QuestionCard>
@@ -644,6 +646,7 @@ function Income() {
                   </button>
                 </div>
               )}
+              </div>
             </div>
           </main>
         </div>
