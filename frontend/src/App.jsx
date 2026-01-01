@@ -18,6 +18,8 @@ import PriorVisaHistory from './pages/PriorVisaHistory'
 import Address from './pages/Address'
 import Review from './pages/Review'
 import Form8843Generated from './pages/Form8843Generated'
+import TaxCalculation from './pages/TaxCalculation'
+import TaxCalculationSummary from './pages/TaxCalculationSummary'
 import ResetPassword from './pages/ResetPassword'
 import Auth from './pages/Auth'
 import About from './pages/About'
@@ -119,6 +121,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Address />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/tax-calculation" 
+            element={
+              <ProtectedRoute>
+                <TaxCalculation />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/filing/tax-calculation/summary" 
+            element={
+              <ProtectedRoute>
+                <TaxCalculationSummary />
               </ProtectedRoute>
             } 
           />

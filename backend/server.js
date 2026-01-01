@@ -745,6 +745,44 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+// W-2 Tax Calculation Endpoint
+app.post('/api/tax/calculate-w2', async (req, res) => {
+  try {
+    const filingData = req.body;
+
+    if (!filingData || !filingData.filing_income) {
+      return res.status(400).json({
+        success: false,
+        error: 'Filing data is required. Missing filing_income data.'
+      });
+    }
+
+    logger.debug('\n=== W-2 Tax Calculation Request ===');
+    logger.debug('Received filing data for tax calculation');
+
+    const { calculateW2Tax } = await import('./services/w2TaxCalculationService.js');
+    const result = calculateW2Tax(filingData);
+
+    logger.info('✓ Tax calculation completed successfully\n');
+
+    res.json(result);
+  } catch (error) {
+    logger.error('W-2 tax calculation error:', error);
+
+    let errorMessage = 'Failed to calculate tax';
+    if (error.message.includes('No W-2 documents')) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = error.message || 'Failed to calculate tax';
+    }
+
+    res.status(500).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   logger.info(`Server is running on http://localhost:${PORT}`);

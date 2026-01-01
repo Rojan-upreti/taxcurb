@@ -14,6 +14,8 @@ const pageTitles = {
   '/filing/program&USpresence': 'Program & US Presence - TaxCurb',
   '/filing/prior_visa_history': 'Prior Visa History - TaxCurb',
   '/filing/address': 'Address - TaxCurb',
+  '/filing/tax-calculation': 'Tax Calculation - TaxCurb',
+  '/filing/tax-calculation/summary': 'Tax Calculation Summary - TaxCurb',
   '/filing/review': 'Review - TaxCurb',
   '/auth': 'Sign In / Sign Up - TaxCurb',
   '/reset-password': 'Reset Password - TaxCurb',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
@@ -35,6 +35,7 @@ function Income() {
   const [isCurrentFormValid, setIsCurrentFormValid] = useState(false)
   const [validationError, setValidationError] = useState(null)
   const w2FormRef = useRef(null)
+  const prevIncomeDataRef = useRef('')
 
   // Load visa status data from localStorage
   const [visaData, setVisaData] = useState(null)
@@ -86,8 +87,50 @@ function Income() {
     return entryDate >= yearStart && entryDate <= yearEnd
   }
 
+  // Helper function to organize documents by type (w2.first, w2.second, etc.)
+  const organizeDocumentsByType = (documents) => {
+    const organized = {}
+    
+    // Count documents by type
+    const typeCounts = {}
+    documents.forEach(doc => {
+      if (doc && doc.type) {
+        const typeKey = doc.type.toLowerCase().replace(/[^a-z0-9]/g, '') // e.g., "W-2" -> "w2", "1042-S" -> "1042s"
+        if (!typeCounts[typeKey]) {
+          typeCounts[typeKey] = 0
+        }
+        typeCounts[typeKey]++
+      }
+    })
+    
+    // Organize documents
+    const typeIndices = {}
+    documents.forEach(doc => {
+      if (doc && doc.type && doc.data) {
+        const typeKey = doc.type.toLowerCase().replace(/[^a-z0-9]/g, '')
+        if (!typeIndices[typeKey]) {
+          typeIndices[typeKey] = 0
+        }
+        
+        const index = typeIndices[typeKey]
+        typeIndices[typeKey]++
+        
+        // Use first, second, third, etc. for naming
+        const positionNames = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth']
+        const positionName = positionNames[index] || `doc${index + 1}`
+        
+        if (!organized[typeKey]) {
+          organized[typeKey] = {}
+        }
+        organized[typeKey][positionName] = doc.data
+      }
+    })
+    
+    return organized
+  }
+
   // Save function to ensure data is saved
-  const saveToCache = () => {
+  const saveToCache = useCallback(() => {
     if (hasIncome !== null) {
       try {
         const incomeData = {
@@ -95,10 +138,14 @@ function Income() {
           hasSSN: hasIncome === 'no' ? hasSSN : null,
           ssn: hasIncome === 'no' && hasSSN === 'yes' && ssn.length === 11 ? ssn : '',
           hasCPTOPT: hasIncome === 'yes' ? hasCPTOPT : null,
+          // Always save documentCount when user has income
+          documentCount: hasIncome === 'yes' ? documentCount : null,
           // Add income document data if hasIncome is 'yes'
           ...(hasIncome === 'yes' && {
-            documentCount,
             documentTypes,
+            // Organize documents by type (w2.first, w2.second, etc.)
+            documents: organizeDocumentsByType(incomeDocuments),
+            // Keep incomeDocuments for backward compatibility and internal use
             incomeDocuments,
             currentDocumentIndex
           })
@@ -111,6 +158,38 @@ function Income() {
         }
       }
     }
+  }, [hasIncome, hasSSN, ssn, hasCPTOPT, documentCount, documentTypes, incomeDocuments, currentDocumentIndex])
+
+  // Helper function to reconstruct incomeDocuments from organized documents
+  const reconstructIncomeDocuments = (organizedDocs, documentTypes) => {
+    if (!organizedDocs || !documentTypes || documentTypes.length === 0) {
+      return []
+    }
+    
+    const reconstructed = []
+    const typeIndices = {}
+    
+    documentTypes.forEach((type, index) => {
+      if (!type) return
+      
+      const typeKey = type.toLowerCase().replace(/[^a-z0-9]/g, '')
+      if (!typeIndices[typeKey]) {
+        typeIndices[typeKey] = 0
+      }
+      
+      const positionNames = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth']
+      const positionName = positionNames[typeIndices[typeKey]] || `doc${typeIndices[typeKey] + 1}`
+      typeIndices[typeKey]++
+      
+      const docData = organizedDocs[typeKey]?.[positionName] || {}
+      
+      reconstructed[index] = {
+        type: type,
+        data: docData
+      }
+    })
+    
+    return reconstructed
   }
 
   // Load cached data on mount and whenever location changes
@@ -129,8 +208,19 @@ function Income() {
           setHasCPTOPT(data.hasCPTOPT ?? null)
           setDocumentCount(data.documentCount ?? null)
           setDocumentTypes(data.documentTypes || [])
-          setIncomeDocuments(data.incomeDocuments || [])
+          
+          // Try to load from new organized structure first, fallback to old structure
+          let loadedDocuments = []
+          if (data.documents && data.documentTypes) {
+            loadedDocuments = reconstructIncomeDocuments(data.documents, data.documentTypes)
+          } else if (data.incomeDocuments) {
+            // Fallback to old structure for backward compatibility
+            loadedDocuments = data.incomeDocuments
+          }
+          
+          setIncomeDocuments(loadedDocuments)
           setCurrentDocumentIndex(data.currentDocumentIndex ?? null)
+          
           // Initialize documentTypes array if documentCount is set
           if (data.documentCount && (!data.documentTypes || data.documentTypes.length === 0)) {
             setDocumentTypes(new Array(data.documentCount).fill(''))
@@ -160,10 +250,53 @@ function Income() {
     }
   }, [isCurrentFormValid])
 
-  // Save to cache whenever form data changes
+  // Save to cache whenever form data changes (use ref to prevent infinite loops)
   useEffect(() => {
     if (!hasLoadedFromCache.current) return
-    saveToCache()
+    
+    // Create a string representation of current income data to compare
+    const currentDataString = JSON.stringify({
+      hasIncome,
+      hasSSN,
+      ssn,
+      hasCPTOPT,
+      documentCount,
+      documentTypes,
+      incomeDocuments,
+      currentDocumentIndex
+    })
+    
+    // Only save if data has actually changed
+    if (prevIncomeDataRef.current !== currentDataString) {
+      prevIncomeDataRef.current = currentDataString
+      // Use setTimeout to debounce and prevent infinite loops
+      const timeoutId = setTimeout(() => {
+        if (hasIncome !== null) {
+          try {
+            const incomeData = {
+              hasIncome,
+              hasSSN: hasIncome === 'no' ? hasSSN : null,
+              ssn: hasIncome === 'no' && hasSSN === 'yes' && ssn.length === 11 ? ssn : '',
+              hasCPTOPT: hasIncome === 'yes' ? hasCPTOPT : null,
+              documentCount: hasIncome === 'yes' ? documentCount : null,
+              ...(hasIncome === 'yes' && {
+                documentTypes,
+                documents: organizeDocumentsByType(incomeDocuments),
+                incomeDocuments,
+                currentDocumentIndex
+              })
+            }
+            localStorage.setItem('filing_income', JSON.stringify(incomeData))
+          } catch (e) {
+            logger.error('Error saving income data to cache:', e)
+            if (e.name === 'QuotaExceededError') {
+              logger.warn('localStorage quota exceeded. Consider clearing old data.')
+            }
+          }
+        }
+      }, 100)
+      return () => clearTimeout(timeoutId)
+    }
   }, [hasIncome, hasSSN, ssn, hasCPTOPT, documentCount, documentTypes, incomeDocuments, currentDocumentIndex])
 
   const handleSSNChange = (value) => {
@@ -196,6 +329,8 @@ function Income() {
     setDocumentCount(numCount)
     setDocumentTypes(new Array(numCount).fill(''))
     setIncomeDocuments(new Array(numCount).fill(null))
+    // Save documentCount immediately (useEffect will also save, but this ensures immediate save)
+    setTimeout(saveToCache, 100)
   }
 
   const handleDocumentTypeChange = (index, type) => {
@@ -226,16 +361,18 @@ function Income() {
     }
   }
 
-  const handleFormDataChange = (data) => {
+  const handleFormDataChange = useCallback((data) => {
     setCurrentFormData(data)
     // Update incomeDocuments array
-    const updated = [...incomeDocuments]
-    updated[currentDocumentIndex] = {
-      type: documentTypes[currentDocumentIndex],
-      data: data
-    }
-    setIncomeDocuments(updated)
-  }
+    setIncomeDocuments(prev => {
+      const updated = [...prev]
+      updated[currentDocumentIndex] = {
+        type: documentTypes[currentDocumentIndex],
+        data: data
+      }
+      return updated
+    })
+  }, [currentDocumentIndex, documentTypes])
 
   const handleFormValidationChange = (isValid) => {
     setIsCurrentFormValid(isValid)
@@ -277,9 +414,17 @@ function Income() {
         setCurrentFormData({})
       }
     } else {
-      // All documents completed, navigate to review
+      // All documents completed
       saveToCache()
-      navigate('/filing/review')
+      
+      // Check if any document is W-2, if so navigate to tax calculation
+      const hasW2 = documentTypes.some(type => type === 'W-2')
+      if (hasW2) {
+        navigate('/filing/tax-calculation')
+      } else {
+        // No W-2 documents, go directly to review
+        navigate('/filing/review')
+      }
     }
   }
 
@@ -357,13 +502,13 @@ function Income() {
     <div className="min-h-screen bg-stone-50">
       <Navbar />
       
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
+      <div className={`${currentDocumentIndex !== null ? 'max-w-full' : 'max-w-6xl'} mx-auto px-4 md:px-6 py-6`}>
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Progress Sidebar */}
           <FilingProgress currentPage="income" completedPages={completedPages} />
 
           {/* Main Content */}
-          <main className="flex-1 max-w-2xl order-1 lg:order-2">
+          <main className={`flex-1 ${currentDocumentIndex !== null ? 'max-w-full' : 'max-w-2xl'} order-1 lg:order-2`}>
             <Breadcrumb />
             <div className="text-center mb-6">
               <h1 className="text-2xl md:text-3xl font-semibold text-ink mb-1">Income</h1>
@@ -375,7 +520,7 @@ function Income() {
             </div>
 
             {/* Form Area with Rounded Square Border */}
-            <div className="border-2 border-slate-300 rounded-xl p-6 bg-white">
+            <div className={`border-2 border-slate-300 rounded-xl p-6 bg-white ${currentDocumentIndex !== null ? 'w-full max-w-[1200px] mx-auto' : ''}`}>
               <div className="space-y-4">
               {/* Check if person was in USA in 2025 */}
               {visaData && !wasInUSAIn2025() && (

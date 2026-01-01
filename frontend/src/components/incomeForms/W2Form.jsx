@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react'
 
 const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => {
   const [focusedField, setFocusedField] = useState(null)
@@ -87,7 +87,8 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
     if (onChange) {
       onChange(formData)
     }
-  }, [formData, onChange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]) // Only depend on formData, onChange is stable from parent
 
   useEffect(() => {
     if (onValidationChange) {
@@ -101,8 +102,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
       // Box c - Employer name and address (at least employer name must be filled)
       const cValid = formData.employerName.trim() !== ''
       
-      // Box e - Employee name (at least first and last name must be filled)
-      const eValid = formData.employeeFirstName.trim() !== '' && formData.employeeLastName.trim() !== ''
+      // Box e - Employee name (accept if: full name in first name field OR both first and last name filled separately)
+      const firstNameTrimmed = formData.employeeFirstName.trim()
+      const lastNameTrimmed = formData.employeeLastName.trim()
+      const eValid = (firstNameTrimmed.includes(' ') && firstNameTrimmed.length > 0) || (firstNameTrimmed !== '' && lastNameTrimmed !== '')
       
       // Box f - Employee address (at least address must be filled)
       const fValid = formData.employeeAddress.trim() !== ''
@@ -140,7 +143,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
   }, [formData, onValidationChange])
 
   // Function to get missing mandatory fields
-  const getMissingMandatoryFields = () => {
+  const getMissingMandatoryFields = useCallback(() => {
     const missing = []
     
     // Box a - Employee SSN
@@ -159,7 +162,13 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
     }
     
     // Box e - Employee name
-    if (formData.employeeFirstName.trim() === '' || formData.employeeLastName.trim() === '') {
+    // Accept if: (1) first name contains a space (full name entered), OR (2) both first and last name are filled
+    const firstNameTrimmed = formData.employeeFirstName.trim()
+    const lastNameTrimmed = formData.employeeLastName.trim()
+    const hasFullNameInFirstName = firstNameTrimmed.includes(' ') && firstNameTrimmed.length > 0
+    const hasSeparateFirstAndLast = firstNameTrimmed !== '' && lastNameTrimmed !== ''
+    
+    if (!hasFullNameInFirstName && !hasSeparateFirstAndLast) {
       missing.push('Box e - Employee\'s first name and last name')
     }
     
@@ -209,7 +218,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
     }
     
     return missing
-  }
+  }, [formData])
 
   // Expose getMissingMandatoryFields via ref
   useImperativeHandle(ref, () => ({
@@ -322,35 +331,35 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
   // Label style (inside box, top-left)
   const labelStyle = {
     position: 'absolute',
-    top: '2px',
-    left: '2px',
-    fontSize: '10px',
+    top: '3px',
+    left: '3px',
+    fontSize: '13px',
     color: '#000000',
-    lineHeight: '1.2',
+    lineHeight: '1.3',
     whiteSpace: 'nowrap',
     overflow: 'visible',
-    maxWidth: 'calc(100% - 80px)'
+    maxWidth: 'calc(100% - 150px)'
   }
 
   // Box number style (bold)
   const boxNumberStyle = {
     fontWeight: 'bold',
-    fontSize: '11px',
-    marginRight: '2px'
+    fontSize: '14px',
+    marginRight: '3px'
   }
 
   // Input style (bottom-right, right-aligned)
   const inputStyle = {
     position: 'absolute',
-    bottom: '2px',
-    right: '2px',
+    bottom: '3px',
+    right: '3px',
     border: 'none',
     backgroundColor: 'transparent',
-    fontSize: '12px',
+    fontSize: '15px',
     color: '#000000',
     textAlign: 'right',
     outline: 'none',
-    padding: '2px 4px',
+    padding: '3px 5px',
     fontFamily: 'Arial, Helvetica, sans-serif'
   }
 
@@ -358,14 +367,14 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
   return (
     <div style={{ 
       backgroundColor: 'transparent', 
-      padding: '20px 20px 0px 20px',
+      padding: '24px 24px 0px 24px',
       fontFamily: 'Arial, Helvetica, sans-serif'
     }}>
       {/* White Paper Container - Portrait 8.5x11 ratio */}
       <div style={{
         backgroundColor: '#FFFFFF',
         width: '100%',
-        maxWidth: '1200px',
+        maxWidth: '1000px',
         margin: '0 auto',
         border: '1px solid #000000',
         display: 'grid',
@@ -379,7 +388,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
           display: 'grid',
           gridTemplateColumns: '1fr 2fr 1fr',
           gap: 0,
-          minHeight: '50px'
+          minHeight: '60px'
         }}>
           {/* Column 1: Blank */}
           <div style={{
@@ -392,7 +401,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             alignItems: 'center',
             justifyContent: 'center',
             padding: '4px',
-            minHeight: '50px'
+            minHeight: '60px'
           }}>
             {/* Empty - blank space */}
           </div>
@@ -413,10 +422,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
-              overflow: 'hidden',
+              overflow: 'visible',
               cursor: 'text'
             }}>
-            <div style={{ fontSize: '10px', color: '#000000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '13px', color: '#000000', whiteSpace: 'nowrap', overflow: 'visible' }}>
               <span style={{ fontWeight: 'bold' }}>a</span> Employee's social security number
             </div>
             <input
@@ -430,11 +439,11 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               style={{
                 border: 'none',
                 backgroundColor: 'transparent',
-                fontSize: '12px',
+                fontSize: '15px',
                 color: '#000000',
                 textAlign: 'left',
                 outline: 'none',
-                padding: '2px 4px',
+                padding: '3px 5px',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 width: '100%',
                 marginTop: '4px'
@@ -453,14 +462,14 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             justifyContent: 'center',
             padding: '4px'
           }}>
-            <div style={{ fontSize: '9px', color: '#000000' }}>OMB No. 1545-0029</div>
+            <div style={{ fontSize: '12px', color: '#000000' }}>OMB No. 1545-0029</div>
           </div>
         </div>
 
         {/* Main Body - 2 Column Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '42% 58%',
+          gridTemplateColumns: '45% 55%',
           gap: 0,
           borderTop: '1px solid #000000'
         }}>
@@ -483,7 +492,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 borderLeft: focusedField === 'employerEIN' ? '3px solid #dc2626' : '1px solid #000000',
                 borderRight: focusedField === 'employerEIN' ? '3px solid #dc2626' : '1px solid #000000',
                 borderBottom: focusedField === 'employerEIN' ? '3px solid #dc2626' : '1px solid #000000',
-                minHeight: '35px',
+                minHeight: '42px',
                 cursor: 'text'
               }}>
               <div style={labelStyle}>
@@ -499,7 +508,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 maxLength={11}
                 style={{
                   ...inputStyle,
-                  width: '90px'
+                  width: '108px'
                 }}
               />
             </div>
@@ -516,7 +525,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 borderLeft: ['employerName', 'employerAddress', 'employerCity', 'employerState', 'employerZip'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                 borderRight: ['employerName', 'employerAddress', 'employerCity', 'employerState', 'employerZip'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                 borderBottom: ['employerName', 'employerAddress', 'employerCity', 'employerState', 'employerZip'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
-                minHeight: '90px',
+                minHeight: '108px',
                 cursor: 'text'
               }}>
               <div style={labelStyle}>
@@ -525,9 +534,9 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               </div>
               <div style={{
                 position: 'absolute',
-                top: '18px',
-                left: '2px',
-                right: '2px',
+                top: '22px',
+                left: '3px',
+                right: '3px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '2px'
@@ -541,10 +550,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   style={{
                     border: 'none',
                     backgroundColor: 'transparent',
-                    fontSize: '11px',
+                    fontSize: '14px',
                     color: '#000000',
                     outline: 'none',
-                    padding: '2px 4px',
+                    padding: '3px 5px',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     width: '100%'
                   }}
@@ -558,10 +567,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   style={{
                     border: 'none',
                     backgroundColor: 'transparent',
-                    fontSize: '11px',
+                    fontSize: '14px',
                     color: '#000000',
                     outline: 'none',
-                    padding: '2px 4px',
+                    padding: '3px 5px',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     width: '100%'
                   }}
@@ -576,10 +585,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       flex: 1
                     }}
@@ -594,12 +603,12 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
-                      width: '30px',
+                      width: '36px',
                       textAlign: 'center'
                     }}
                   />
@@ -612,12 +621,12 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
-                      width: '60px'
+                      width: '72px'
                     }}
                   />
                 </div>
@@ -636,7 +645,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 borderLeft: focusedField === 'controlNumber' ? '3px solid #dc2626' : '1px solid #000000',
                 borderRight: focusedField === 'controlNumber' ? '3px solid #dc2626' : '1px solid #000000',
                 borderBottom: focusedField === 'controlNumber' ? '3px solid #dc2626' : '1px solid #000000',
-                minHeight: '35px',
+                minHeight: '42px',
                 cursor: 'text'
               }}>
               <div style={labelStyle}>
@@ -651,7 +660,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 onBlur={() => setFocusedField(null)}
                 style={{
                   ...inputStyle,
-                  width: '120px'
+                  width: '144px'
                 }}
               />
             </div>
@@ -668,7 +677,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 borderLeft: ['employeeFirstName', 'employeeMiddleInitial', 'employeeLastName', 'employeeSuffix'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                 borderRight: ['employeeFirstName', 'employeeMiddleInitial', 'employeeLastName', 'employeeSuffix'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                 borderBottom: ['employeeFirstName', 'employeeMiddleInitial', 'employeeLastName', 'employeeSuffix'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
-                minHeight: '60px',
+                minHeight: '72px',
                 cursor: 'text'
               }}>
               <div style={labelStyle}>
@@ -677,9 +686,9 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               </div>
               <div style={{
                 position: 'absolute',
-                top: '18px',
-                left: '2px',
-                right: '2px',
+                top: '22px',
+                left: '3px',
+                right: '3px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '2px'
@@ -694,10 +703,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       flex: 1
                     }}
@@ -712,12 +721,12 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
-                      width: '20px',
+                      width: '24px',
                       textAlign: 'center'
                     }}
                   />
@@ -732,15 +741,15 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       flex: 1
                     }}
                   />
-                  <span style={{ fontSize: '10px', color: '#000000' }}>Suff.</span>
+                  <span style={{ fontSize: '13px', color: '#000000' }}>Suff.</span>
                   <input
                     type="text"
                     value={formData.employeeSuffix}
@@ -751,12 +760,12 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
-                      width: '40px'
+                      width: '48px'
                     }}
                   />
                 </div>
@@ -775,7 +784,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 borderLeft: ['employeeAddress', 'employeeCity', 'employeeState', 'employeeZip'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                 borderRight: ['employeeAddress', 'employeeCity', 'employeeState', 'employeeZip'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                 borderBottom: ['employeeAddress', 'employeeCity', 'employeeState', 'employeeZip'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
-                minHeight: '90px',
+                minHeight: '108px',
                 cursor: 'text'
               }}>
               <div style={labelStyle}>
@@ -784,9 +793,9 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               </div>
               <div style={{
                 position: 'absolute',
-                top: '18px',
-                left: '2px',
-                right: '2px',
+                top: '22px',
+                left: '3px',
+                right: '3px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '2px'
@@ -800,10 +809,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   style={{
                     border: 'none',
                     backgroundColor: 'transparent',
-                    fontSize: '11px',
+                    fontSize: '14px',
                     color: '#000000',
                     outline: 'none',
-                    padding: '2px 4px',
+                    padding: '3px 5px',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     width: '100%'
                   }}
@@ -818,10 +827,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       flex: 1
                     }}
@@ -836,12 +845,12 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
-                      width: '30px',
+                      width: '36px',
                       textAlign: 'center'
                     }}
                   />
@@ -854,12 +863,12 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
-                      width: '60px'
+                      width: '72px'
                     }}
                   />
                 </div>
@@ -893,7 +902,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'wagesTipsOther' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'wagesTipsOther' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'wagesTipsOther' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -908,7 +917,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -925,7 +934,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'socialSecurityWages' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'socialSecurityWages' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'socialSecurityWages' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -940,7 +949,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -957,7 +966,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'medicareWages' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'medicareWages' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'medicareWages' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -972,7 +981,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -989,7 +998,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'socialSecurityTips' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'socialSecurityTips' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'socialSecurityTips' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1004,7 +1013,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -1034,7 +1043,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'nonqualifiedPlans' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'nonqualifiedPlans' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'nonqualifiedPlans' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1049,7 +1058,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -1060,14 +1069,14 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                 borderTop: 'none',
                 borderLeft: 'none',
                 borderRight: 'none',
-                minHeight: '55px'
+                minHeight: '65px'
               }}>
                 <div style={labelStyle}>
                   <span style={boxNumberStyle}>13</span>
                 </div>
                 <div style={{
                   position: 'absolute',
-                  top: '18px',
+                  top: '22px',
                   left: '2px',
                   right: '2px',
                   display: 'flex',
@@ -1087,7 +1096,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                         cursor: 'pointer'
                       }}
                     />
-                    <span style={{ fontSize: '10px', color: '#000000' }}>Statutory employee</span>
+                    <span style={{ fontSize: '13px', color: '#000000' }}>Statutory employee</span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                     <input
@@ -1102,7 +1111,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                         cursor: 'pointer'
                       }}
                     />
-                    <span style={{ fontSize: '10px', color: '#000000' }}>Retirement plan</span>
+                    <span style={{ fontSize: '13px', color: '#000000' }}>Retirement plan</span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                     <input
@@ -1117,7 +1126,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                         cursor: 'pointer'
                       }}
                     />
-                    <span style={{ fontSize: '10px', color: '#000000' }}>Third-party sick pay</span>
+                    <span style={{ fontSize: '13px', color: '#000000' }}>Third-party sick pay</span>
                   </label>
                 </div>
               </div>
@@ -1134,7 +1143,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'box14Other' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'box14Other' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'box14Other' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '55px',
+                  minHeight: '50px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1148,16 +1157,16 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     position: 'absolute',
-                    top: '18px',
+                    top: '22px',
                     left: '2px',
                     right: '2px',
                     bottom: '2px',
                     border: 'none',
                     backgroundColor: 'transparent',
-                    fontSize: '11px',
+                    fontSize: '14px',
                     color: '#000000',
                     outline: 'none',
-                    padding: '2px 4px',
+                    padding: '3px 5px',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     resize: 'none'
                   }}
@@ -1184,7 +1193,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'federalIncomeTax' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'federalIncomeTax' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'federalIncomeTax' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1199,7 +1208,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -1216,7 +1225,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'socialSecurityTax' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'socialSecurityTax' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'socialSecurityTax' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1231,7 +1240,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -1248,7 +1257,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'medicareTax' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'medicareTax' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'medicareTax' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1263,7 +1272,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -1280,7 +1289,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'allocatedTips' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'allocatedTips' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'allocatedTips' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1295,7 +1304,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -1312,7 +1321,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: focusedField === 'dependentCareBenefits' ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: focusedField === 'dependentCareBenefits' ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: focusedField === 'dependentCareBenefits' ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1327,7 +1336,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   onBlur={() => setFocusedField(null)}
                   style={{
                     ...inputStyle,
-                    width: '80px'
+                    width: '96px'
                   }}
                 />
               </div>
@@ -1344,7 +1353,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: ['box12a', 'box12aCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: ['box12a', 'box12aCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: ['box12a', 'box12aCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1380,10 +1389,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '12px',
+                      fontSize: '15px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       width: '35px',
                       textAlign: 'center'
@@ -1404,7 +1413,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: ['box12b', 'box12bCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: ['box12b', 'box12bCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: ['box12b', 'box12bCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1440,10 +1449,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '12px',
+                      fontSize: '15px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       width: '35px',
                       textAlign: 'center'
@@ -1464,7 +1473,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: ['box12c', 'box12cCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: ['box12c', 'box12cCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: ['box12c', 'box12cCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1500,10 +1509,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '12px',
+                      fontSize: '15px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       width: '35px',
                       textAlign: 'center'
@@ -1524,7 +1533,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                   borderLeft: ['box12d', 'box12dCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderRight: ['box12d', 'box12dCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
                   borderBottom: ['box12d', 'box12dCode'].includes(focusedField) ? '3px solid #dc2626' : '1px solid #000000',
-                  minHeight: '35px',
+                  minHeight: '42px',
                   cursor: 'text'
                 }}>
                 <div style={labelStyle}>
@@ -1560,10 +1569,10 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
                     style={{
                       border: 'none',
                       backgroundColor: 'transparent',
-                      fontSize: '12px',
+                      fontSize: '15px',
                       color: '#000000',
                       outline: 'none',
-                      padding: '2px 4px',
+                      padding: '3px 5px',
                       fontFamily: 'Arial, Helvetica, sans-serif',
                       width: '35px',
                       textAlign: 'center'
@@ -1587,7 +1596,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             ...boxStyle,
             borderTop: 'none',
             borderRight: '1px solid #000000',
-            minHeight: '25px',
+                minHeight: '30px',
             height: '25px'
           }}>
             <div style={labelStyle}>
@@ -1602,7 +1611,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               alignItems: 'center',
               gap: '2px',
               whiteSpace: 'nowrap',
-              overflow: 'hidden'
+              overflow: 'visible'
             }}>
               <span style={{ fontSize: '8px', color: '#000000', whiteSpace: 'nowrap' }}>State</span>
               <span style={{ fontSize: '7px', color: '#000000', whiteSpace: 'nowrap' }}>Emp. state ID</span>
@@ -1615,7 +1624,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             borderTop: 'none',
             borderLeft: 'none',
             borderRight: '1px solid #000000',
-            minHeight: '25px',
+                minHeight: '30px',
             height: '25px'
           }}>
             <div style={labelStyle}>
@@ -1630,7 +1639,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             borderTop: 'none',
             borderLeft: 'none',
             borderRight: '1px solid #000000',
-            minHeight: '25px',
+                minHeight: '30px',
             height: '25px'
           }}>
             <div style={labelStyle}>
@@ -1645,7 +1654,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             borderTop: 'none',
             borderLeft: 'none',
             borderRight: '1px solid #000000',
-            minHeight: '25px',
+                minHeight: '30px',
             height: '25px'
           }}>
             <div style={labelStyle}>
@@ -1660,7 +1669,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             borderTop: 'none',
             borderLeft: 'none',
             borderRight: '1px solid #000000',
-            minHeight: '25px',
+                minHeight: '30px',
             height: '25px'
           }}>
             <div style={labelStyle}>
@@ -1674,7 +1683,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
             ...boxStyle,
             borderTop: 'none',
             borderLeft: 'none',
-            minHeight: '25px',
+                minHeight: '30px',
             height: '25px'
           }}>
             <div style={labelStyle}>
@@ -1703,7 +1712,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               borderRight: focusedField === 'state2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderBottom: focusedField === 'state2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderLeft: focusedField === 'state2' ? '3px solid #dc2626' : '1px dashed #000000',
-              minHeight: '25px',
+                minHeight: '30px',
               height: '25px',
               cursor: 'text'
             }}>
@@ -1715,15 +1724,15 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               style={{
                 position: 'absolute',
                 top: '2px',
-                left: '2px',
-                right: '2px',
+                left: '3px',
+                right: '3px',
                 bottom: '2px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                fontSize: '11px',
+                fontSize: '14px',
                 color: '#000000',
                 outline: 'none',
-                padding: '2px 4px',
+                padding: '3px 5px',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 width: 'calc(100% - 4px)',
                 cursor: 'pointer'
@@ -1749,7 +1758,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               borderLeft: focusedField === 'stateWages2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderRight: focusedField === 'stateWages2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderBottom: focusedField === 'stateWages2' ? '3px solid #dc2626' : '1px dashed #000000',
-              minHeight: '25px',
+                minHeight: '30px',
               height: '25px',
               cursor: 'text'
             }}>
@@ -1762,16 +1771,16 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               style={{
                 position: 'absolute',
                 top: '2px',
-                left: '2px',
-                right: '2px',
+                left: '3px',
+                right: '3px',
                 bottom: '2px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                fontSize: '12px',
+                fontSize: '15px',
                 color: '#000000',
                 textAlign: 'right',
                 outline: 'none',
-                padding: '2px 4px',
+                padding: '3px 5px',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 width: 'calc(100% - 4px)'
               }}
@@ -1790,7 +1799,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               borderLeft: focusedField === 'stateIncomeTax2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderRight: focusedField === 'stateIncomeTax2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderBottom: focusedField === 'stateIncomeTax2' ? '3px solid #dc2626' : '1px dashed #000000',
-              minHeight: '25px',
+                minHeight: '30px',
               height: '25px',
               cursor: 'text'
             }}>
@@ -1803,16 +1812,16 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               style={{
                 position: 'absolute',
                 top: '2px',
-                left: '2px',
-                right: '2px',
+                left: '3px',
+                right: '3px',
                 bottom: '2px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                fontSize: '12px',
+                fontSize: '15px',
                 color: '#000000',
                 textAlign: 'right',
                 outline: 'none',
-                padding: '2px 4px',
+                padding: '3px 5px',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 width: 'calc(100% - 4px)'
               }}
@@ -1831,7 +1840,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               borderLeft: focusedField === 'localWages2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderRight: focusedField === 'localWages2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderBottom: focusedField === 'localWages2' ? '3px solid #dc2626' : '1px dashed #000000',
-              minHeight: '25px',
+                minHeight: '30px',
               height: '25px',
               cursor: 'text'
             }}>
@@ -1844,16 +1853,16 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               style={{
                 position: 'absolute',
                 top: '2px',
-                left: '2px',
-                right: '2px',
+                left: '3px',
+                right: '3px',
                 bottom: '2px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                fontSize: '12px',
+                fontSize: '15px',
                 color: '#000000',
                 textAlign: 'right',
                 outline: 'none',
-                padding: '2px 4px',
+                padding: '3px 5px',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 width: 'calc(100% - 4px)'
               }}
@@ -1872,7 +1881,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               borderLeft: focusedField === 'localIncomeTax2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderRight: focusedField === 'localIncomeTax2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderBottom: focusedField === 'localIncomeTax2' ? '3px solid #dc2626' : '1px dashed #000000',
-              minHeight: '25px',
+                minHeight: '30px',
               height: '25px',
               cursor: 'text'
             }}>
@@ -1885,16 +1894,16 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               style={{
                 position: 'absolute',
                 top: '2px',
-                left: '2px',
-                right: '2px',
+                left: '3px',
+                right: '3px',
                 bottom: '2px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                fontSize: '12px',
+                fontSize: '15px',
                 color: '#000000',
                 textAlign: 'right',
                 outline: 'none',
-                padding: '2px 4px',
+                padding: '3px 5px',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 width: 'calc(100% - 4px)'
               }}
@@ -1913,7 +1922,7 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               borderLeft: focusedField === 'localityName2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderRight: focusedField === 'localityName2' ? '3px solid #dc2626' : '1px dashed #000000',
               borderBottom: focusedField === 'localityName2' ? '3px solid #dc2626' : '1px dashed #000000',
-              minHeight: '25px',
+                minHeight: '30px',
               height: '25px',
               cursor: 'text'
             }}>
@@ -1926,15 +1935,15 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
               style={{
                 position: 'absolute',
                 top: '2px',
-                left: '2px',
-                right: '2px',
+                left: '3px',
+                right: '3px',
                 bottom: '2px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                fontSize: '11px',
+                fontSize: '14px',
                 color: '#000000',
                 outline: 'none',
-                padding: '2px 4px',
+                padding: '3px 5px',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 width: 'calc(100% - 4px)'
               }}
