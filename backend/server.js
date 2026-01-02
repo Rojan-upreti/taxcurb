@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import logger from './utils/logger.js';
@@ -13,16 +14,54 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 
-// Security middleware - set security headers
-app.use((req, res, next) => {
-  // Prevent XSS attacks
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  // Prevent MIME type sniffing
-  res.setHeader('Content-Security-Policy', "default-src 'self'");
-  next();
-});
+// Security headers with Helmet.js
+// Configured for API server (serves JSON, not HTML)
+app.use(helmet({
+  // Content Security Policy - disabled for API (not serving HTML)
+  // CSP is primarily for HTML pages, not JSON APIs
+  contentSecurityPolicy: false,
+  // Cross-Origin Embedder Policy - disabled for API compatibility
+  crossOriginEmbedderPolicy: false,
+  // Cross-Origin Opener Policy - not needed for API
+  crossOriginOpenerPolicy: false,
+  // Cross-Origin Resource Policy - allow cross-origin for API
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  // DNS Prefetch Control - prevent DNS prefetching
+  dnsPrefetchControl: true,
+  // Expect-CT - Certificate Transparency (deprecated but still used)
+  expectCt: {
+    maxAge: 86400, // 24 hours
+    enforce: false,
+  },
+  // Frameguard - prevent clickjacking (not needed for API but harmless)
+  frameguard: { action: 'deny' },
+  // Hide Powered-By header - remove X-Powered-By header
+  hidePoweredBy: true,
+  // HSTS - HTTP Strict Transport Security (only in production with HTTPS)
+  hsts: process.env.NODE_ENV === 'production' ? {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  } : false,
+  // IE No Open - prevent IE from executing downloads in site context
+  ieNoOpen: true,
+  // No Sniff - prevent MIME type sniffing (important for API)
+  noSniff: true,
+  // Origin Agent Cluster - enable origin isolation
+  originAgentCluster: true,
+  // Permissions Policy - restrict browser features (not needed for API but harmless)
+  permissionsPolicy: {
+    features: {
+      geolocation: ["'none'"],
+      microphone: ["'none'"],
+      camera: ["'none'"],
+    },
+  },
+  // Referrer Policy - control referrer information
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  // XSS Protection - legacy XSS filter (still useful for older browsers)
+  xssFilter: true,
+}));
 
 // Middleware
 app.use(cors({
