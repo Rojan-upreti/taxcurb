@@ -102,21 +102,45 @@ function TaxCalculation() {
                 </div>
               ) : taxData ? (
                 <div className="space-y-6">
+                  {/* Net Amount - Highlighted (Top) */}
+                  <div className={`border-2 rounded-lg p-6 ${taxData.netAmount < 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+                    <div className="text-center">
+                      <p className={`text-sm mb-2 ${taxData.netAmount < 0 ? 'text-green-700' : 'text-red-700'}`}>
+                        {taxData.netAmount < 0 ? 'Net Refund' : 'Net Amount to Pay'}
+                      </p>
+                      <p className={`text-3xl font-bold ${taxData.netAmount < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(Math.abs(taxData.netAmount))}
+                      </p>
+                      <p className={`text-xs mt-2 ${taxData.netAmount < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        Tax Owed - FICA Refund = Net Amount
+                      </p>
+                      <p className={`text-xs mt-1 ${taxData.netAmount < 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {formatCurrency(taxData.taxOwed)} - {formatCurrency(taxData.ficaBreakdown?.ficaRefund || 0)} = {formatCurrency(taxData.netAmount)}
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Breakdown Section */}
                   <div className="space-y-3">
                     <h2 className="text-lg font-semibold text-ink">Income Breakdown</h2>
                     <div className="bg-stone-50 border border-slate-200 rounded-lg p-4 space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-slate-700">Total Wages (Box 1)</span>
-                        <span className="text-sm font-medium text-ink">{formatCurrency(taxData.breakdown.totalWages)}</span>
+                        <span className="text-sm font-medium text-ink">{formatCurrency(taxData.breakdown?.totalWages)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-slate-700">Total State Tax (Box 17, Row 2)</span>
-                        <span className="text-sm font-medium text-ink">{formatCurrency(taxData.breakdown.totalStateTax)}</span>
+                        <span className="text-sm font-medium text-ink">{formatCurrency(taxData.breakdown?.totalStateTax)}</span>
                       </div>
+                      {taxData.breakdown?.saltCapApplied && taxData.breakdown?.stateTaxDeduction !== undefined && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-amber-700">State Tax Deduction (Capped at $10,000 per IRS SALT limit)</span>
+                          <span className="text-xs font-medium text-amber-700">{formatCurrency(taxData.breakdown.stateTaxDeduction)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center pt-2 border-t border-slate-300">
                         <span className="text-sm text-slate-700">Federal Tax Withheld (Box 2)</span>
-                        <span className="text-sm font-medium text-ink">{formatCurrency(taxData.breakdown.totalFederalTax)}</span>
+                        <span className="text-sm font-medium text-ink">{formatCurrency(taxData.breakdown?.totalFederalTax)}</span>
                       </div>
                     </div>
                   </div>
@@ -126,7 +150,12 @@ function TaxCalculation() {
                     <div className="text-center">
                       <p className="text-sm text-slate-600 mb-2">Taxable Income</p>
                       <p className="text-3xl font-bold text-ink">{formatCurrency(taxData.taxableIncome)}</p>
-                      <p className="text-xs text-slate-500 mt-2">Total Wages - State Tax</p>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Total Wages - State Tax Deduction
+                        {taxData.breakdown?.saltCapApplied && (
+                          <span className="block text-amber-600 mt-1">(State tax deduction capped at $10,000 per IRS SALT limit)</span>
+                        )}
+                      </p>
                     </div>
                   </div>
 
@@ -134,11 +163,11 @@ function TaxCalculation() {
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-blue-800">Calculated Tax ({taxData.taxBracket})</span>
-                      <span className="text-sm font-medium text-blue-900">{formatCurrency(taxData.breakdown.calculatedTax)}</span>
+                      <span className="text-sm font-medium text-blue-900">{formatCurrency(taxData.breakdown?.calculatedTax)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-blue-800">Federal Tax Withheld</span>
-                      <span className="text-sm font-medium text-blue-900">- {formatCurrency(taxData.breakdown.totalFederalTax)}</span>
+                      <span className="text-sm font-medium text-blue-900">- {formatCurrency(taxData.breakdown?.totalFederalTax)}</span>
                     </div>
                   </div>
 
@@ -149,6 +178,64 @@ function TaxCalculation() {
                       <p className="text-3xl font-bold text-red-600">{formatCurrency(taxData.taxOwed)}</p>
                       <p className="text-xs text-red-600 mt-2">Calculated Tax - Federal Tax Withheld</p>
                       <p className="text-xs text-red-500 mt-1">Tax Bracket: {taxData.taxBracket} ({taxData.bracketRange})</p>
+                    </div>
+                  </div>
+
+                  {/* FICA Information Section */}
+                  <div className="space-y-3">
+                    <h2 className="text-lg font-semibold text-ink">FICA Information</h2>
+                    <div className="bg-stone-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-slate-700">Total FICA Paid (Box 4 + Box 6)</span>
+                        <span className="text-sm font-medium text-ink">{formatCurrency(taxData.ficaBreakdown?.totalFICA)}</span>
+                      </div>
+                      {taxData.ficaBreakdown?.dateEnteredUS ? (
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-300">
+                          <span className="text-sm text-slate-700">Date Entered US (I-94)</span>
+                          <span className="text-sm font-medium text-ink">
+                            {new Date(taxData.ficaBreakdown.dateEnteredUS).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </span>
+                        </div>
+                      ) : null}
+                      <div className="flex justify-between items-center pt-2 border-t border-slate-300">
+                        <span className="text-sm text-slate-700">Years Since Entry (to Dec 31, 2025)</span>
+                        <span className="text-sm font-medium text-ink">
+                          {taxData.ficaBreakdown?.yearsSinceEntry !== null && taxData.ficaBreakdown?.yearsSinceEntry !== undefined
+                            ? taxData.ficaBreakdown.yearsSinceEntry
+                            : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-slate-300">
+                        <span className="text-sm text-slate-700">Eligible for FICA Refund</span>
+                        <span className={`text-sm font-medium ${taxData.ficaBreakdown?.eligibleForRefund ? 'text-green-600' : 'text-red-600'}`}>
+                          {taxData.ficaBreakdown?.eligibleForRefund ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      {taxData.ficaBreakdown?.eligibleForRefund ? (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+                          <p className="text-xs text-green-800">
+                            <strong>Eligible:</strong> You entered the US {taxData.ficaBreakdown.yearsSinceEntry} year{taxData.ficaBreakdown.yearsSinceEntry !== 1 ? 's' : ''} ago (5 years or less from tax year end). You are eligible for a FICA refund.
+                          </p>
+                        </div>
+                      ) : taxData.ficaBreakdown?.yearsSinceEntry !== null && taxData.ficaBreakdown?.yearsSinceEntry !== undefined ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+                          <p className="text-xs text-amber-800">
+                            <strong>Not Eligible:</strong> You entered the US {taxData.ficaBreakdown.yearsSinceEntry} year{taxData.ficaBreakdown.yearsSinceEntry !== 1 ? 's' : ''} ago (more than 5 years from tax year end). FICA refund is not available.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+                          <p className="text-xs text-amber-800">
+                            <strong>Not Eligible:</strong> I-94 entry date not found. Please complete the visa status section.
+                          </p>
+                        </div>
+                      )}
+                      {taxData.ficaBreakdown?.ficaRefund > 0 && (
+                        <div className="flex justify-between items-center pt-2 border-t-2 border-green-300">
+                          <span className="text-sm font-semibold text-green-700">FICA Refund Amount</span>
+                          <span className="text-sm font-bold text-green-600">{formatCurrency(taxData.ficaBreakdown.ficaRefund)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

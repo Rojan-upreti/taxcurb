@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react'
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useCallback, useRef } from 'react'
 
 const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => {
   const [focusedField, setFocusedField] = useState(null)
@@ -82,6 +82,30 @@ const W2Form = forwardRef(({ data = {}, onChange, onValidationChange }, ref) => 
     localIncomeTax2: data.localIncomeTax2 || '',
     localityName2: data.localityName2 || ''
   })
+
+  // Sync formData with data prop when it changes (e.g., from localStorage)
+  // Use a ref to track previous data to prevent unnecessary updates
+  const prevDataRef = useRef(null)
+  
+  useEffect(() => {
+    if (data && Object.keys(data).length > 0) {
+      // Only update if data actually changed
+      const dataString = JSON.stringify(data)
+      if (prevDataRef.current !== dataString) {
+        prevDataRef.current = dataString
+        setFormData(prev => {
+          // Merge data prop values into formData, only updating fields that exist in data
+          const updated = { ...prev }
+          Object.keys(data).forEach(key => {
+            if (data[key] !== undefined) {
+              updated[key] = data[key]
+            }
+          })
+          return updated
+        })
+      }
+    }
+  }, [data])
 
   useEffect(() => {
     if (onChange) {
