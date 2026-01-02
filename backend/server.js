@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import logger from './utils/logger.js';
@@ -30,6 +31,32 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' })); // Limit request body size
 app.use(cookieParser());
+
+// Rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: {
+    success: false,
+    error: 'Too many authentication attempts from this IP, please try again after 15 minutes.',
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skipSuccessfulRequests: false, // Count successful requests too
+  skipFailedRequests: false, // Count failed requests
+});
+
+// Stricter rate limiter for password reset (fewer attempts allowed)
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 password reset requests per hour
+  message: {
+    success: false,
+    error: 'Too many password reset attempts from this IP, please try again after 1 hour.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Initialize Firebase Admin with credentials from .env
 let firebaseAdminInitialized = false;
@@ -186,7 +213,7 @@ app.get('/api/auth/check', async (req, res) => {
 });
 
 // Signup endpoint - backend handles all Firebase operations
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -269,7 +296,7 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 // Signin endpoint - backend handles all Firebase operations
-app.post('/api/auth/signin', async (req, res) => {
+app.post('/api/auth/signin', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -439,7 +466,7 @@ app.post('/api/forms/8843/generate', async (req, res) => {
 });
 
 // Forgot password endpoint - sends reset email
-app.post('/api/auth/forgot-password', async (req, res) => {
+app.post('/api/auth/forgot-password', passwordResetLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -671,7 +698,7 @@ app.get('/api/vehicle/models', async (req, res) => {
 });
 
 // Reset password endpoint - verifies code and updates password
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', passwordResetLimiter, async (req, res) => {
   try {
     const { oobCode, newPassword } = req.body;
 
